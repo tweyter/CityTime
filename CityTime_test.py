@@ -1,4 +1,3 @@
-__author__ = 'Thorsten'
 
 import unittest
 from CityTime import CityTime

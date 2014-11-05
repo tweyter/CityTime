@@ -4,7 +4,6 @@ the local time and the local time zone, and translates the time into UTC.  The t
 in various formats and also incremented forward and back while still adjusting for daylight savings time.
 """
 
-__author__ = 'Thorsten'
 
 from calendar import day_name
 import datetime
