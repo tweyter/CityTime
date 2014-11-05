@@ -24,10 +24,13 @@ class CityTime(object):
     """
     def __init__(self, time=None, tz=None):
         """
+        CityTime objects can be instantiated using no parameters (creating a blank object that must be
+        set later), a datetime.datetime object + time zone string, or another CityTime object.
+
         Parameter tz will be ignored if parameter time is of type CityTime.
 
         @type time: unknown or CityTime
-        @param tz:
+        @type tz: str
         @raise TypeError:
         """
         if time and isinstance(time, CityTime):
