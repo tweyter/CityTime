@@ -5,6 +5,7 @@ from calendar import day_name
 import datetime
 import pytz
 from pytz.exceptions import NonExistentTimeError
+from pytz.exceptions import UnknownTimeZoneError
 
 
 class PositiveTests(unittest.TestCase):
@@ -83,13 +84,13 @@ class PositiveTests(unittest.TestCase):
     def test_utc(self):
         self.ct1.set(self.current_time, 'utc')
         ct = self.current_time.replace(tzinfo=pytz.timezone('utc'))
-        self.assertEqual(self.ct1.utc, ct)
-        self.assertEqual(self.ct1.local.tzinfo, ct.tzinfo)
+        self.assertEqual(self.ct1.utc(), ct)
+        self.assertEqual(self.ct1.tzinfo(), ct.tzinfo())
 
     def test_local(self):
-        self.ct1.set(self.current_time, str(self.current_time.tzinfo))
-        self.assertEqual(self.ct1.local, self.current_time)
-        self.assertEqual(self.ct1.local.tzinfo, self.current_time.tzinfo)
+        self.ct1.set(self.current_time, str(self.current_time.tzinfo()))
+        self.assertEqual(self.ct1.local(), self.current_time)
+        self.assertEqual(self.ct1.tzinfo(), self.current_time.tzinfo())
 
     def test_astimezone(self):
         self.ct1.set(self.current_time, str(self.current_time.tzinfo))
@@ -146,6 +147,37 @@ class PositiveTests(unittest.TestCase):
             # increment each keyword argument by one
             self.ct1.increment(**{inc: 1})
             self.assertEqual(self.ct1.local, et)
+
+    def test_local_strftime(self):
+        formats = ('%a', '%A', '%w', '%d', '%b', '%B', '%c', '%x', '%X')
+        test_time = self.ct1
+        test_time.set(self.current_time, str(self.current_time.tzinfo))
+        for form in formats:
+            self.assertEqual(test_time.local_strftime(form), self.current_time.strftime(form))
+
+    def test_utc_strftime(self):
+        formats = ('%a', '%A', '%w', '%d', '%b', '%B', '%c', '%x', '%X')
+        test_time = self.ct1
+        test_time.set(self.current_time, str(self.current_time.tzinfo))
+        test_utc = test_time.utc()
+        for form in formats:
+            self.assertEqual(test_time.utc_strftime(form), test_utc.strftime(form))
+
+    def test_today(self):
+        test_time = CityTime.today()
+        self.assertIsInstance(test_time, CityTime)
+        self.assertIsInstance(test_time.local(), datetime.datetime)
+        self.assertEqual(test_time.timezone(), 'UTC')
+        test_date = datetime.date.today()
+        self.assertEqual(test_time.local().date(), test_date)
+
+    def test_now(self):
+        test_zone = 'America/Chicago'
+        test_time = CityTime.now(test_zone)
+        test_date = datetime.date.today()
+        self.assertIsInstance(test_time, CityTime)
+        self.assertEqual(test_time.timezone(), test_zone)
+        self.assertEqual(test_time.local().date(), test_date)
 
 
 class NegativeTests(unittest.TestCase):
@@ -230,6 +262,34 @@ class NegativeTests(unittest.TestCase):
             # increment each keyword argument by one
             self.ct1.increment(**{inc: 1})
             self.assertEqual(self.ct1.local, et)
+
+    def test_local_strftime(self):
+        formats = ('%+', '%[')
+        test_time = self.ct1
+        test_time.set(self.current_time, str(self.current_time.tzinfo))
+        for form in formats:
+            self.assertEqual(test_time.local_strftime(form), None)
+
+    def test_utc_strftime(self):
+        formats = ('%+', '%[')
+        test_time = self.ct1
+        test_time.set(self.current_time, str(self.current_time.tzinfo))
+        test_utc = test_time.utc()
+        for form in formats:
+            self.assertEqual(test_time.utc_strftime(form), None)
+
+    def test_today(self):
+        """
+        I can't think of any failure tests to use here.
+
+        """
+
+    def test_now(self):
+        test_zone = ''
+        callable_obj = getattr(CityTime, 'now')
+        self.assertRaises(ValueError, callable_obj, test_zone)
+        test_zone = 'Idontknow/WhereToGo'
+        self.assertRaises(UnknownTimeZoneError, callable_obj, test_zone)
 
 if __name__ == '__main__':
     unittest.main()
