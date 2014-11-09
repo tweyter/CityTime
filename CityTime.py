@@ -5,7 +5,7 @@ Dependencies:
     pytz
 
 Thanks:
-    /u/p
+    /u/phira
 
 The CityTime object is my solution for the headache of time zones and daylight savings time.  It takes
 the local time and the local time zone, and translates the time into UTC.  The time can then be reproduced
