@@ -162,6 +162,31 @@ __ge__():
     this object is set to 3pm in Chicago, the comparison will then return False becaues 3pm in
     Chicago is equivalent to 4pm in New York.
 
+__add__():
+    Returns a new CityTime object with the daylight savings time adjusted sum of this CityTime object
+    and a given timedelta.
+
+    This method mirrors the __add__ method of datetime.datetime, except that it adjusts for daylight
+    savings time. Instead of straight addition, however, this method increments the time forward or
+    backward depending on the given timedelta. Forward if the timedelta is positive, backward if the
+    timedelta is negative.  It will raise AmbiguousTimeError or NonExistentTimeError if the sum results
+    in an ambiguous time or a non existent time (caused by the transition to/from daylight
+    savings time.
+
+__radd__():
+    Same as __add__()
+
+__sub__():
+    Returns a new CityTime object with the result of this CityTime object decremented by
+    the amount of time in the given timedelta.
+
+    This mirrors the __sub__ method of datetime.datetime, except that it adjusts for daylight
+    savings time. It will raise AmbiguousTimeError or NonExistentTimeError if the product results
+    in an ambiguous time or a non existent time (caused by the transition to/from daylight
+    savings time.
+
+__rsub__():
+    Same as __sub__()
 
 There are also three exceptions inherited from pytz:
 AmbiguousTimeError:
@@ -212,12 +237,14 @@ class CityTime(object):
             self._tz = time.tzinfo
             self._datetime = time.utc
             self._t_zone = time.timezone
-        elif time and tz:
+        elif isinstance(time, datetime.datetime) and isinstance(tz, str):
             self.set(time, tz)
-        else:
+        elif time is None:
             self._datetime = datetime.datetime.min
             self._t_zone = str()
             self._tz = pytz.timezone('utc')
+        else:
+            raise TypeError("Argument 'time' must be of type 'CityTime' or 'datetime.datetime'")
 
     def __str__(self):
         """
@@ -226,7 +253,7 @@ class CityTime(object):
         @rtype: str
         """
         if self._datetime != datetime.datetime.min:
-            return str(self.local)
+            return str(self.local())
         else:
             return "CityTime object not set yet."
 
@@ -259,16 +286,11 @@ class CityTime(object):
         @type other: CityTime
         @rtype: bool
         """
-        if not isinstance(other, CityTime):
-            return False
-        try:
-            other_utc = getattr(other, 'utc')
-        except AttributeError:
-            return False
-        if self.utc() == other_utc():
+        other_utc = getattr(other, 'utc', None)
+        if other_utc and self.utc() == other_utc():
             return True
         else:
-            return False
+            return self.utc() == other
 
     def __ne__(self, other):
         """
@@ -281,16 +303,11 @@ class CityTime(object):
         @type other: CityTime
         @rtype: bool
         """
-        if not isinstance(other, CityTime):
-            return False
-        try:
-            other_utc = getattr(other, 'utc')
-        except AttributeError:
-            return False
-        if self.utc() != other_utc():
+        other_utc = getattr(other, 'utc', None)
+        if other_utc and self.utc() != other_utc():
             return True
         else:
-            return False
+            return self.utc() != other
 
     def __lt__(self, other):
         """
@@ -305,16 +322,11 @@ class CityTime(object):
         @type other: CityTime
         @rtype: bool
         """
-        if not isinstance(other, CityTime):
-            return False
-        try:
-            other_utc = getattr(other, 'utc')
-        except AttributeError:
-            return False
-        if self.utc() < other_utc():
+        other_utc = getattr(other, 'utc', None)
+        if other_utc and self.utc() < other_utc():
             return True
         else:
-            return False
+            return self.utc() < other
 
     def __le__(self, other):
         """
@@ -331,16 +343,11 @@ class CityTime(object):
         @type other: CityTime
         @rtype: bool
         """
-        if not isinstance(other, CityTime):
-            return False
-        try:
-            other_utc = getattr(other, 'utc')
-        except AttributeError:
-            return False
-        if self.utc() <= other_utc():
+        other_utc = getattr(other, 'utc', None)
+        if other_utc and self.utc() <= other_utc():
             return True
         else:
-            return False
+            return self.utc() <= other
 
     def __gt__(self, other):
         """
@@ -354,16 +361,11 @@ class CityTime(object):
         @type other: CityTime
         @rtype: bool
         """
-        if not isinstance(other, CityTime):
-            return False
-        try:
-            other_utc = getattr(other, 'utc')
-        except AttributeError:
-            return False
-        if self.utc() > other_utc():
+        other_utc = getattr(other, 'utc', None)
+        if other_utc and self.utc() > other_utc():
             return True
         else:
-            return False
+            return self.utc() > other
 
     def __ge__(self, other):
         """
@@ -380,16 +382,53 @@ class CityTime(object):
         @type other: CityTime
         @rtype: bool
         """
-        if not isinstance(other, CityTime):
-            return False
-        try:
-            other_utc = getattr(other, 'utc')
-        except AttributeError:
-            return False
-        if self.utc() >= other_utc():
+        other_utc = getattr(other, 'utc', None)
+        if other_utc and self.utc() >= other_utc():
             return True
         else:
-            return False
+            return self.utc() >= other
+
+    def __add__(self, other):
+        """
+        Returns a new CityTime object with the daylight savings time adjusted sum of this CityTime object
+        and a given timedelta.
+
+        This method mirrors the __add__ method of datetime.datetime, except that it adjusts for daylight
+        savings time. Instead of straight addition, however, this method increments the time forward or
+        backward depending on the given timedelta. Forward if the timedelta is positive, backward if the
+        timedelta is negative.  It will raise AmbiguousTimeError or NonExistentTimeError if the sum results
+        in an ambiguous time or a non existent time (caused by the transition to/from daylight
+        savings time.
+
+        @type other datetime.timedelta
+        @rtype: CityTime
+        """
+        new_object = CityTime()
+        new_object.set(self.local(), self.timezone())
+        new_object.increment(seconds=other.total_seconds())
+        return new_object
+
+    __radd__ = __add__
+
+    def __sub__(self, other):
+        """
+        Returns a new CityTime object with the result of this CityTime object decremented by
+        the amount of time in the given timedelta.
+
+        This mirrors the __sub__ method of datetime.datetime, except that it adjusts for daylight
+        savings time. It will raise AmbiguousTimeError or NonExistentTimeError if the product results
+        in an ambiguous time or a non existent time (caused by the transition to/from daylight
+        savings time.
+
+        @type other datetime.timedelta
+        @rtype: CityTime
+        """
+        new_object = CityTime()
+        new_object.set(self.local(), self.timezone())
+        new_object.increment(seconds=-other.total_seconds())
+        return new_object
+
+    __rsub__ = __sub__
 
     def set(self, date_time, time_zone):
 
@@ -405,18 +444,26 @@ class CityTime(object):
         @type date_time: datetime.datetime
         @type time_zone: str
         """
-        if isinstance(time_zone, str):
-            self._t_zone = time_zone
-            self._tz = pytz.timezone(time_zone)
-        else:
-            raise ValueError("Second argument must be of type string")
+        try:
+            time_zone.upper()
+        except AttributeError:
+            raise AttributeError("Attribute 'time_zone' must be of type 'str'")
 
-        if isinstance(date_time, datetime.datetime):
+        try:
             tz = pytz.timezone(time_zone)
+        except pytz.exceptions.UnknownTimeZoneError:
+            raise UnknownTimeZoneError(time_zone)
+
+        try:
             dt = tz.localize(date_time.replace(tzinfo=None))
-            self._datetime = dt.astimezone(pytz.utc)
-        else:
-            raise ValueError("First parameter must be of type datetime.datetime")
+        except AttributeError:
+            raise AttributeError("Attribute 'date_time' should be of type 'datetime.datetime")
+        except TypeError:
+            raise TypeError("Attribute 'date_time' should be of type 'datetime.datetime")
+
+        self._datetime = dt.astimezone(pytz.utc)
+        self._t_zone = time_zone
+        self._tz = tz
 
     def check_set(self):
         """

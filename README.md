@@ -161,6 +161,31 @@ because when it is 4pm in Chicago it is 5pm in New York, and thus the times are 
 this object is set to 3pm in Chicago, the comparison will then return False becaues 3pm in
 Chicago is equivalent to 4pm in New York.
 
+###__add__():
+Returns a new CityTime object with the daylight savings time adjusted sum of this CityTime object
+and a given timedelta.
+
+This method mirrors the __add__ method of datetime.datetime, except that it adjusts for daylight
+savings time. Instead of straight addition, however, this method increments the time forward or
+backward depending on the given timedelta. Forward if the timedelta is positive, backward if the 
+timedelta is negative.  It will raise AmbiguousTimeError or NonExistentTimeError if the sum results
+in an ambiguous time or a non existent time (caused by the transition to/from daylight
+savings time.
+
+###__radd__():
+Same as __add__()
+
+###__sub__():
+Returns a new CityTime object with the result of this CityTime object decremented by
+the amount of time in the given timedelta.
+
+This mirrors the __sub__ method of datetime.datetime, except that it adjusts for daylight
+savings time. It will raise AmbiguousTimeError or NonExistentTimeError if the product results
+in an ambiguous time or a non existent time (caused by the transition to/from daylight
+savings time.
+
+###__rsub__():
+Same as __sub__()
 
 ##There are also three exceptions inherited from pytz:
 ###AmbiguousTimeError:

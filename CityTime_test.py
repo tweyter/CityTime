@@ -25,9 +25,9 @@ class PositiveTests(unittest.TestCase):
         self.assertEqual(self.ct1._t_zone, '')
         self.ct2.set(self.current_time, 'US/Eastern')
         ct2 = CityTime(self.ct2)
-        self.assertEqual(ct2._t_zone, 'US/Eastern')
-        self.assertEqual(ct2._tz, pytz.timezone('US/Eastern'))
-        self.assertEqual(ct2._datetime, self.current_time)
+        self.assertEqual(ct2._t_zone(), 'US/Eastern')
+        self.assertEqual(ct2._tz(), pytz.timezone('US/Eastern'))
+        self.assertEqual(ct2._datetime(), self.current_time)
 
     def test__str__(self):
         ct1 = self.ct1
@@ -39,11 +39,17 @@ class PositiveTests(unittest.TestCase):
         self.ct1.set(self.current_time, 'US/Eastern')
         self.ct2.set(self.current_time, 'US/Eastern')
         self.assertTrue(self.ct1 == self.ct2)
+        utc_time = self.ct1.utc()
+        self.assertTrue(self.ct1 == utc_time)
 
     def test__ne__(self):
         self.ct1.set(self.early_time, 'US/Eastern')
         self.ct2.set(self.current_time, 'US/Eastern')
         self.assertTrue(self.ct1 != self.ct2)
+        utc_time = self.ct2.utc()
+        self.assertTrue(self.ct1 != utc_time)
+        non_datetime = {}
+        self.assertTrue(self.ct1 != non_datetime)
 
     def test__lt__(self):
         self.ct1.set(self.early_time, 'US/Eastern')
@@ -71,6 +77,50 @@ class PositiveTests(unittest.TestCase):
         self.ct2.set(self.current_time, 'US/Eastern')
         self.assertTrue(self.ct1 >= self.ct2)
 
+    def test__add__(self):
+        self.ct1.set(self.early_time, 'US/Eastern')
+        td = datetime.timedelta(hours=1)
+        self.ct2.set(self.early_time, 'US/Eastern')
+        self.ct2.increment(hours=1)
+        result = self.ct1 + td
+        # check to see if the result is ct1 incremented forward 1 hour
+        self.assertEqual(result, self.ct2)
+        # check to see that ct1 is not changed, but that the method returned a new CityTime object
+        self.assertNotEqual(self.ct1, result)
+
+    def test__radd__(self):
+        self.ct1.set(self.early_time, 'US/Eastern')
+        td = datetime.timedelta(hours=1)
+        self.ct2.set(self.early_time, 'US/Eastern')
+        self.ct2.increment(seconds=td.total_seconds())
+        result = self.ct1 + td
+        # check to see if the result is ct1 incremented forward 1 hour
+        self.assertEqual(result, self.ct2)
+        # check to see that ct1 is not changed, but that the method returned a new CityTime object
+        self.assertNotEqual(self.ct1, result)
+
+    def test__sub__(self):
+        self.ct1.set(self.early_time, 'US/Eastern')
+        td = datetime.timedelta(hours=1)
+        self.ct2.set(self.early_time, 'US/Eastern')
+        self.ct2.increment(seconds=-td.total_seconds())
+        result = self.ct1 - td
+        # check to see if the result is ct1 incremented backward 1 hour
+        self.assertEqual(result, self.ct2)
+        # check to see that ct1 is not changed, but that the method returned a new CityTime object
+        self.assertNotEqual(self.ct1, result)
+
+    def test__rsub__(self):
+        self.ct1.set(self.early_time, 'US/Eastern')
+        td = datetime.timedelta(hours=1)
+        self.ct2.set(self.early_time, 'US/Eastern')
+        self.ct2.increment(seconds=-td.total_seconds())
+        result = self.ct1 - td
+        # check to see if the result is ct1 incremented backward 1 hour
+        self.assertEqual(result, self.ct2)
+        # check to see that ct1 is not changed, but that the method returned a new CityTime object
+        self.assertNotEqual(self.ct1, result)
+
     def test_set(self):
         self.ct1.set(self.current_time, 'US/Eastern')
         self.assertEqual(self.ct1._datetime, self.current_time)
@@ -85,12 +135,12 @@ class PositiveTests(unittest.TestCase):
         self.ct1.set(self.current_time, 'utc')
         ct = self.current_time.replace(tzinfo=pytz.timezone('utc'))
         self.assertEqual(self.ct1.utc(), ct)
-        self.assertEqual(self.ct1.tzinfo(), ct.tzinfo())
+        self.assertEqual(self.ct1.tzinfo(), ct.tzinfo)
 
     def test_local(self):
-        self.ct1.set(self.current_time, str(self.current_time.tzinfo()))
+        self.ct1.set(self.current_time, str(self.current_time.tzinfo))
         self.assertEqual(self.ct1.local(), self.current_time)
-        self.assertEqual(self.ct1.tzinfo(), self.current_time.tzinfo())
+        self.assertEqual(self.ct1.timezone(), str(self.current_time.tzinfo))
 
     def test_astimezone(self):
         self.ct1.set(self.current_time, str(self.current_time.tzinfo))
@@ -100,34 +150,34 @@ class PositiveTests(unittest.TestCase):
     def test_local_minute(self):
         self.ct1.set(self.current_time, str(self.current_time.tzinfo))
         minutes = self.current_time.hour * 60 + self.current_time.minute
-        self.assertEqual(self.ct1.local_minute, minutes)
+        self.assertEqual(self.ct1.local_minute(), minutes)
 
     def test_timezone(self):
         self.ct1.set(self.current_time, str(self.current_time.tzinfo))
-        self.assertEqual(self.ct1.timezone, str(self.current_time.tzinfo))
+        self.assertEqual(self.ct1.timezone(), str(self.current_time.tzinfo))
 
     def test_tzinfo(self):
         self.ct1.set(self.current_time, str(self.current_time.tzinfo))
-        self.assertEqual(self.ct1.tzinfo, pytz.timezone(str(self.current_time.tzinfo)))
+        self.assertEqual(self.ct1.tzinfo(), pytz.timezone(str(self.current_time.tzinfo)))
 
     def test_weekday(self):
         self.ct1.set(self.current_time, str(self.current_time.tzinfo))
-        self.assertEqual(self.ct1.weekday, self.current_time.weekday())
+        self.assertEqual(self.ct1.weekday(), self.current_time.weekday())
 
     def test_day_name(self):
         self.ct1.set(self.current_time, str(self.current_time.tzinfo))
         name = day_name[self.current_time.weekday()]
-        self.assertEqual(self.ct1.day_name, name)
+        self.assertEqual(self.ct1.day_name(), name)
 
     def test_day_abbr(self):
         weekdays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
         self.ct1.set(self.current_time, str(self.current_time.tzinfo))
-        self.assertEqual(self.ct1.day_abbr, weekdays[self.current_time.weekday()])
+        self.assertEqual(self.ct1.day_abbr(), weekdays[self.current_time.weekday()])
 
     def test_time_string(self):
         self.ct1.set(self.current_time, str(self.current_time.tzinfo))
         time_string = self.current_time.strftime('%H%M')
-        self.assertEqual(self.ct1.time_string, time_string)
+        self.assertEqual(self.ct1.time_string(), time_string)
 
     def test_increment(self):
         times = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
@@ -146,7 +196,7 @@ class PositiveTests(unittest.TestCase):
             et = et.replace(**{inc[:-1]: 2})
             # increment each keyword argument by one
             self.ct1.increment(**{inc: 1})
-            self.assertEqual(self.ct1.local, et)
+            self.assertEqual(self.ct1.local(), et)
 
     def test_local_strftime(self):
         formats = ('%a', '%A', '%w', '%d', '%b', '%B', '%c', '%x', '%X')
@@ -198,15 +248,25 @@ class NegativeTests(unittest.TestCase):
 
     def test__eq__(self):
         self.ct1.set(self.early_time, 'US/Eastern')
+        self.ct1.check_set()
         self.ct2.set(self.current_time, 'US/Eastern')
         self.assertFalse(self.ct1 == self.ct2)
         self.assertFalse(self.ct1 == 2)
+        self.assertFalse(self.ct1 == 'X')
+        utc_time = self.ct1.utc().replace(year=2013)
+        self.assertFalse(self.ct1 == utc_time)
+        non_datetime = {}
+        self.assertFalse(self.ct1 == non_datetime)
 
     def test__ne__(self):
         self.ct1.set(self.current_time, 'US/Eastern')
         self.ct2.set(self.current_time, 'US/Eastern')
         self.assertFalse(self.ct1 != self.ct2)
         self.assertTrue(self.ct1 != 2)
+        self.assertTrue(self.ct1 != 'X')
+        self.assertFalse(self.ct1 != self.ct1)
+        utc_time = self.ct1.utc()
+        self.assertFalse(self.ct1 != utc_time)
 
     def test__lt__(self):
         self.ct1.set(self.early_time, 'US/Eastern')
@@ -229,12 +289,14 @@ class NegativeTests(unittest.TestCase):
             self.ct1 >= 2
 
     def test_set(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AttributeError):
             self.ct1.set(2, 'US/Eastern')
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AttributeError):
             self.ct1.set(self.current_time, 2)
         with self.assertRaises(pytz.exceptions.UnknownTimeZoneError):
             self.ct1.set(self.current_time, 'US/Moscow')
+        with self.assertRaises(TypeError):
+            self.ct1.set(datetime.date.today(), 'US/Eastern')
 
     def test_check_set(self):
         self.assertRaises(ValueError, self.ct1.check_set)
@@ -261,7 +323,7 @@ class NegativeTests(unittest.TestCase):
             et = et.replace(**{inc[:-1]: 2})
             # increment each keyword argument by one
             self.ct1.increment(**{inc: 1})
-            self.assertEqual(self.ct1.local, et)
+            self.assertEqual(self.ct1.local(), et)
 
     def test_local_strftime(self):
         formats = ('%+', '%[')
