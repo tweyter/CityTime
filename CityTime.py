@@ -234,9 +234,9 @@ class CityTime(object):
         @raise TypeError:
         """
         if time and isinstance(time, CityTime):
-            self._tz = time.tzinfo
-            self._datetime = time.utc
-            self._t_zone = time.timezone
+            self._tz = time.tzinfo()
+            self._datetime = time.utc()
+            self._t_zone = time.timezone()
         elif isinstance(time, datetime.datetime) and isinstance(tz, str):
             self.set(time, tz)
         elif time is None:

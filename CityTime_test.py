@@ -24,9 +24,9 @@ class PositiveTests(unittest.TestCase):
         self.assertEqual(self.ct1._t_zone, '')
         self.ct2.set(self.current_time, 'US/Eastern')
         ct2 = CityTime(self.ct2)
-        self.assertEqual(ct2._t_zone(), 'US/Eastern')
-        self.assertEqual(ct2._tz(), pytz.timezone('US/Eastern'))
-        self.assertEqual(ct2._datetime(), self.current_time)
+        self.assertEqual(ct2._t_zone, 'US/Eastern')
+        self.assertEqual(ct2._tz, pytz.timezone('US/Eastern'))
+        self.assertEqual(ct2._datetime, self.current_time)
 
     def test__str__(self):
         ct1 = self.ct1
