@@ -298,10 +298,31 @@ class NegativeTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             self.ct1.set(datetime.date.today(), 'US/Eastern')
 
+    def test_set_utc_datetime(self):
+        t = datetime.datetime.now(tz=pytz.timezone('UTC'))
+        self.ct1.set(t, time_zone='US/Eastern')
+        self.assertEqual(t, self.ct1.utc())
+
+    def test_is_set(self):
+        self.assertFalse(self.ct1.is_set())
+
+    def test_is_set_no_timezone(self):
+        self.ct1._datetime = self.current_time
+        self.assertFalse(self.ct1.is_set())
+
     def test_check_set(self):
         self.assertRaises(ValueError, self.ct1.check_set)
+
+    def test_check_set_no_timezone(self):
         self.ct1._datetime = self.current_time
         self.assertRaises(ValueError, self.ct1.check_set)
+
+    def test_bool(self):
+        self.assertFalse(self.ct1)
+
+    def test_bool_is_true(self):
+        self.ct1.set(self.current_time, 'US/Eastern')
+        self.assertTrue(self.ct1)
 
     def test_increment(self):
         self.ct1.set(self.current_time, 'US/Eastern')

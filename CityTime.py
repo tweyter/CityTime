@@ -263,10 +263,7 @@ class CityTime(object):
 
         @rtype: bool
         """
-        if self._datetime == datetime.datetime.min:
-            return False
-        else:
-            return True
+        return self.is_set()
 
     def __hash__(self):
         """
@@ -454,18 +451,21 @@ class CityTime(object):
         except pytz.exceptions.UnknownTimeZoneError:
             raise UnknownTimeZoneError(time_zone)
 
-        try:
-            dt = tz.localize(date_time.replace(tzinfo=None))
-        except AttributeError:
-            raise AttributeError("Attribute 'date_time' should be of type 'datetime.datetime")
-        except TypeError:
-            raise TypeError("Attribute 'date_time' should be of type 'datetime.datetime")
+        if getattr(date_time, 'tzinfo', None) == pytz.timezone('UTC'):
+            self._datetime = date_time
+        else:
+            try:
+                dt = tz.localize(date_time.replace(tzinfo=None))
+            except AttributeError:
+                raise AttributeError("Attribute 'date_time' should be of type 'datetime.datetime")
+            except TypeError:
+                raise TypeError("Attribute 'date_time' should be of type 'datetime.datetime")
+            self._datetime = dt.astimezone(pytz.utc)
 
-        self._datetime = dt.astimezone(pytz.utc)
         self._t_zone = time_zone
         self._tz = tz
 
-    def check_set(self):
+    def is_set(self):
         """
         Checks to see whether a CityTime object has been created with or without
         the local time being set.
@@ -474,10 +474,16 @@ class CityTime(object):
         will actually set its time later in the program.
         """
         if self._datetime == datetime.datetime.min:
-            raise ValueError('Date has not been set.')
+            return False
 
         if self._t_zone == '':
-            raise ValueError('Time zone has not been set.')
+            return False
+
+        return True
+
+    def check_set(self):
+        if not self.is_set():
+            raise ValueError('Date/Time zone has not been set.')
 
     def utc(self):
         """
@@ -682,7 +688,7 @@ class CityTime(object):
         except ValueError:
             return
         else:
-            return utc_datetime.strftime(form)
+            return result
 
     @classmethod
     def today(cls):
