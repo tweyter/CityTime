@@ -1,4 +1,3 @@
-
 import unittest
 from CityTime import CityTime
 from calendar import day_name
