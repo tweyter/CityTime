@@ -173,9 +173,6 @@ __add__():
     in an ambiguous time or a non existent time (caused by the transition to/from daylight
     savings time.
 
-__radd__():
-    Same as __add__()
-
 __sub__():
     Returns a new CityTime object with the result of this CityTime object decremented by
     the amount of time in the given timedelta.
@@ -184,9 +181,6 @@ __sub__():
     savings time. It will raise AmbiguousTimeError or NonExistentTimeError if the product results
     in an ambiguous time or a non existent time (caused by the transition to/from daylight
     savings time.
-
-__rsub__():
-    Same as __sub__()
 
 There are also three exceptions inherited from pytz:
 AmbiguousTimeError:
@@ -405,7 +399,6 @@ class CityTime(object):
         new_object.increment(seconds=other.total_seconds())
         return new_object
 
-    __radd__ = __add__
 
     def __sub__(self, other):
         """
@@ -417,15 +410,21 @@ class CityTime(object):
         in an ambiguous time or a non existent time (caused by the transition to/from daylight
         savings time.
 
-        @type other datetime.timedelta
+        @type other CityTime, datetime
         @rtype: CityTime
         """
-        new_object = CityTime()
-        new_object.set(self.local(), self.timezone())
-        new_object.increment(seconds=-other.total_seconds())
-        return new_object
-
-    __rsub__ = __sub__
+        if isinstance(other, datetime.timedelta):
+            new_object = CityTime()
+            new_object.set(self.local(), self.timezone())
+            new_object.increment(seconds=-other.total_seconds())
+            return new_object
+        elif isinstance(other, CityTime):
+            return self.utc() - other.utc()
+        elif isinstance(other, datetime.datetime):
+            raise UnknownTimeZoneError("Can't subtract regular datetime from CityTime object due to lack of"
+                                       " Olson timezone database information.")
+        else:
+            raise ValueError("Can't subtract type %s from CityTime object" % type(other))
 
     def set(self, date_time, time_zone):
 
@@ -455,11 +454,15 @@ class CityTime(object):
             self._datetime = date_time
         else:
             try:
-                dt = tz.localize(date_time.replace(tzinfo=None))
+                dt = tz.localize(date_time.replace(tzinfo=None), is_dst=None)
             except AttributeError:
                 raise AttributeError("Attribute 'date_time' should be of type 'datetime.datetime")
             except TypeError:
                 raise TypeError("Attribute 'date_time' should be of type 'datetime.datetime")
+            except NonExistentTimeError:
+                raise NonExistentTimeError('That time does not exist due to the change in DST')
+            except AmbiguousTimeError:
+                raise AmbiguousTimeError('That time is undefined due to the change in DST')
             self._datetime = dt.astimezone(pytz.utc)
 
         self._t_zone = time_zone
@@ -627,10 +630,10 @@ class CityTime(object):
         """
 
         self.check_set()
-        if not days and not hours and not minutes and not seconds:
+        if days is None and hours is None and minutes is None and seconds is None:
             raise ValueError('Parameters missing.')
-        dt = self._tz.normalize(self._datetime)
-        increment = datetime.timedelta(seconds=0)
+        # dt = self._tz.normalize(self._datetime)
+        increment = datetime.timedelta()
         if days:
             increment += datetime.timedelta(days=days)
         if hours:
@@ -639,20 +642,18 @@ class CityTime(object):
             increment += datetime.timedelta(seconds=minutes * 60)
         if seconds:
             increment += datetime.timedelta(seconds=seconds)
-        result = dt + increment
-        assert isinstance(result, datetime.datetime)
-        utc_result = result.astimezone(pytz.utc)
+        result = self._datetime + increment
         # ... check to see if the local time is during the change to/from daylight savings time
+        # I may be misunderstanding this. Since it is UTC that is being incremented, creating
+        # these errors is impossible???
         try:
-            self._tz.localize(result.replace(tzinfo=None), is_dst=False)
+            self._tz.normalize(result.astimezone(self._tz))
         except AmbiguousTimeError:
             print('pytz.exceptions.AmbiguousTimeError: %s' % result)
-        try:
-            self._tz.localize(result.replace(tzinfo=None), is_dst=False)
         except NonExistentTimeError:
             print('pytz.exceptions.NonExistentTimeError: %s' % result)
         # ...
-        self._datetime = utc_result
+        self._datetime = result
 
     def local_strftime(self, form):
         """
