@@ -443,7 +443,7 @@ class CityTime(object):
         try:
             time_zone.upper()
         except AttributeError:
-            raise AttributeError("Attribute 'time_zone' must be of type 'str'")
+            raise UnknownTimeZoneError("Attribute 'time_zone' must be of type 'str'")
 
         try:
             tz = pytz.timezone(time_zone)
@@ -630,9 +630,13 @@ class CityTime(object):
         """
 
         self.check_set()
+
         if days is None and hours is None and minutes is None and seconds is None:
             raise ValueError('Parameters missing.')
-        # dt = self._tz.normalize(self._datetime)
+        seconds = int(seconds)
+        if not all(isinstance(x, (int, float)) for x in [days, hours, minutes, seconds] if x is not None):
+            print('{}:{}'.format(type(seconds), seconds))
+            raise TypeError('Increment parameters must be of type <int> or <float>')
         increment = datetime.timedelta()
         if days:
             increment += datetime.timedelta(days=days)

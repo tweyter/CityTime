@@ -6,7 +6,7 @@ import pytz
 from pytz.exceptions import NonExistentTimeError, AmbiguousTimeError
 from pytz.exceptions import UnknownTimeZoneError
 from hypothesis import given, assume
-from hypothesis.specifiers import sampled_from
+from hypothesis.specifiers import sampled_from, one_of
 from hypothesis.extra.datetime import naive_datetime, timezone_aware_datetime
 
 
@@ -151,16 +151,18 @@ class PositiveTests(unittest.TestCase):
     def test__add__(self):
         @given(naive_datetime, int, sampled_from(self.sample_timezones))
         def test_it(dt1, i, tz):
-            assume(abs(i) < 999999999)
+            assume(-999999999 < i < 999999999)
             td = datetime.timedelta(seconds=i)
             if i > 0:
                 assume(dt1 < self.datetime_max - td)
             elif i < 0:
                 assume(dt1 > self.datetime_min - td)
             ct1 = CityTime(dt1, tz)
-            result = ct1 + td
             ct2 = CityTime(dt1, tz)
-            ct2.increment(seconds=i)
+            ci = int(i)
+            assert isinstance(ci, int)
+            print(ci)
+            ct2.increment(seconds=ci)
             self.assertEqual(ct1 + td, ct2)
             # check to see that ct1 is not changed, but that the method returned a new CityTime object
             self.assertFalse(ct1 is ct1 + td)
@@ -292,10 +294,10 @@ class PositiveTests(unittest.TestCase):
         test_it()
 
     def test_increment(self):
-        @given(naive_datetime, sampled_from(self.sample_timezones), int, int ,int, int)
+        @given(naive_datetime, sampled_from(self.sample_timezones), int, int, int, int)
         def test_it(dt, tz, d, h, m, s):
-            assume(abs(d) < 999999999)
-            assume(abs(h) < 999999999)
+            assume(abs(d) < 99999)
+            assume(abs(h) < 9999999)
             assume(abs(m) < 999999999)
             assume(abs(s) < 999999999)
             td = datetime.timedelta(days=d, hours=h, minutes=m, seconds=s)
@@ -354,6 +356,7 @@ class NegativeTests(unittest.TestCase):
         self.ct1 = CityTime()
         self.ct2 = CityTime()
         self.ct3 = CityTime()
+        self.sample_timezones = pytz.common_timezones_set
 
     def test_initialization(self):
         self.assertRaises(ValueError, self.ct1.astimezone, 'utc')
@@ -372,45 +375,88 @@ class NegativeTests(unittest.TestCase):
         non_datetime = {}
         self.assertNotEqual(self.ct1, non_datetime)
 
-    def test__ne__(self):
+    def test__ne__false(self):
         self.ct1.set(self.current_time, 'US/Eastern')
         self.ct2.set(self.current_time, 'US/Eastern')
         self.assertFalse(self.ct1 != self.ct2)
-        self.assertTrue(self.ct1 != 2)
-        self.assertTrue(self.ct1 != 'X')
-        self.assertFalse(self.ct1 != self.ct1)
-        utc_time = self.ct1.utc()
-        self.assertFalse(self.ct1 != utc_time)
+
+    def test__ne__true(self):
+        @given(one_of((int, bool, None, float, complex, str, bytes)))
+        def test_it(x):
+            ct1 = CityTime(self.early_time, 'US/Eastern')
+            self.assertNotEqual(ct1, x)
+        test_it()
+
+    def test__ne__datetime(self):
+        @given(naive_datetime, sampled_from(self.sample_timezones))
+        def test_it(dt, tz):
+            assume(dt.minute != 1)
+            dt1 = dt.replace(tzinfo=pytz.utc)
+            ct1 = CityTime(dt1.replace(minute=1), tz)
+            self.assertNotEqual(ct1, dt1)
+        test_it()
 
     def test__lt__(self):
-        self.ct1.set(self.early_time, 'US/Eastern')
-        with self.assertRaises(TypeError):
-            self.ct1 < 2
+        @given(one_of((int, bool, None, float, complex, str, bytes)))
+        def test_it(x):
+            self.ct1.set(self.early_time, 'US/Eastern')
+            with self.assertRaises(TypeError):
+                self.ct1 < x
+        test_it()
 
     def test__le__(self):
-        self.ct1.set(self.early_time, 'US/Eastern')
-        with self.assertRaises(TypeError):
-            self.ct1 <= 2
+        @given(one_of((int, bool, None, float, complex, str, bytes)))
+        def test_it(x):
+            self.ct1.set(self.early_time, 'US/Eastern')
+            with self.assertRaises(TypeError):
+                self.ct1 <= x
+        test_it()
 
     def test__gt__(self):
-        self.ct1.set(self.early_time, 'US/Eastern')
-        with self.assertRaises(TypeError):
-            self.ct1 > 2
+        @given(one_of((int, bool, None, float, complex, str, bytes)))
+        def test_it(x):
+            self.ct1.set(self.early_time, 'US/Eastern')
+            with self.assertRaises(TypeError):
+                self.ct1 > x
+        test_it()
 
     def test__ge__(self):
-        self.ct1.set(self.early_time, 'US/Eastern')
-        with self.assertRaises(TypeError):
-            self.ct1 >= 2
+        @given(one_of((int, bool, None, float, complex, str, bytes)))
+        def test_it(x):
+            self.ct1.set(self.early_time, 'US/Eastern')
+            with self.assertRaises(TypeError):
+                self.ct1 >= x
+        test_it()
 
-    def test_set(self):
-        with self.assertRaises(AttributeError):
-            self.ct1.set(2, 'US/Eastern')
-        with self.assertRaises(AttributeError):
-            self.ct1.set(self.current_time, 2)
+    def test_set_dt(self):
+        @given(one_of((int, bool, None, float, complex, str, bytes)))
+        def test_it(x):
+            self.ct1.set(self.early_time, 'US/Eastern')
+            with self.assertRaises((AttributeError, TypeError)):
+                self.ct1.set(x, 'US/Eastern')
+        test_it()
+
+    def test_set_tz(self):
+        @given(one_of((int, bool, None, float, complex, str, bytes)))
+        def test_it(x):
+            self.ct1.set(self.early_time, 'US/Eastern')
+            with self.assertRaises(UnknownTimeZoneError):
+                self.ct1.set(self.current_time, x)
+        test_it()
+
+    def test_set_unknown_tz(self):
         with self.assertRaises(pytz.exceptions.UnknownTimeZoneError):
             self.ct1.set(self.current_time, 'US/Moscow')
-        with self.assertRaises(TypeError):
-            self.ct1.set(datetime.date.today(), 'US/Eastern')
+
+    def test_set_date_instead_of_datetime(self):
+        @given(int)
+        def test_it(y):
+            assume(0 < y < 9999)
+            date = datetime.date(y, 1, 1)
+            self.ct1.set(self.early_time, 'US/Eastern')
+            with self.assertRaises(TypeError):
+                self.ct1.set(date, 'US/Eastern')
+        test_it()
 
     def test_set_nonexistent_time(self):
         self.assertRaises(
@@ -454,27 +500,13 @@ class NegativeTests(unittest.TestCase):
         self.ct1.set(self.current_time, 'US/Eastern')
         self.assertTrue(self.ct1)
 
-    def test_increment(self):
-        self.ct1.set(self.current_time, 'US/Eastern')
-        with self.assertRaises(TypeError):
-            self.ct1.increment('x')
-        times = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
-        # years and months aren't part of .increment() keyword arguments, so leave those out
-        increments = times[2:6]
-        # make a dict of the values of self.early_time
-        t_args = dict(zip([x[:-1] for x in times], self.early_time.timetuple()))
-        # then add the time zone
-        t_args['tzinfo'] = pytz.timezone('Japan')
-        # unpack the dict into the keyword arguments
-        et = datetime.datetime(**t_args)
-        # use it to set self.ct1, so that they're both the same
-        self.ct1.set(et, 'Japan')
-        for inc in increments:
-            # increment each keyword argument by one (replace the 1 with a 2)
-            et = et.replace(**{inc[:-1]: 2})
-            # increment each keyword argument by one
-            self.ct1.increment(**{inc: 1})
-            self.assertEqual(self.ct1.local(), et)
+    def test_increment_wrong_type(self):
+        @given(one_of((bool, None, float, complex, str, bytes)))
+        def test_it(x):
+            ct1 = CityTime(self.current_time, 'US/Eastern')
+            with self.assertRaises((TypeError, ValueError)):
+                ct1.increment(x)
+        test_it()
 
     def test_increment_no_data(self):
         self.ct1.set(self.current_time, 'US/Eastern')
