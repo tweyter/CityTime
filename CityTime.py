@@ -399,7 +399,6 @@ class CityTime(object):
         new_object.increment(seconds=other.total_seconds())
         return new_object
 
-
     def __sub__(self, other):
         """
         Returns a new CityTime object with the result of this CityTime object decremented by
@@ -675,7 +674,7 @@ class CityTime(object):
         except ValueError:
             return
         else:
-            return local_datetime.strftime(form)
+            return result
 
     def utc_strftime(self, form):
         """
