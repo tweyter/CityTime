@@ -6,8 +6,9 @@ import pytz
 from pytz.exceptions import NonExistentTimeError, AmbiguousTimeError
 from pytz.exceptions import UnknownTimeZoneError
 from hypothesis import given, assume
-from hypothesis.specifiers import sampled_from, one_of
-from hypothesis.extra.datetime import naive_datetime, timezone_aware_datetime
+import hypothesis.strategies as st
+from hypothesis.searchstrategy.strategies import OneOfStrategy
+from hypothesis.extra.datetime import datetimes
 
 
 class PositiveTests(unittest.TestCase):
@@ -34,285 +35,254 @@ class PositiveTests(unittest.TestCase):
     def test_initialized_t_zone(self):
         self.assertEqual(self.ct1._t_zone, '')
 
-    def test_set_t_zone(self):
-        @given(datetime.datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            self.ct2.set(dt, tz)
-            self.assertEqual(self.ct2._t_zone, tz)
-        test_it()
+    @given(datetimes())
+    def test_set_t_zone(self, dt):
+        self.ct2.set(dt, str(dt.tzinfo))
+        self.assertEqual(self.ct2._t_zone, str(dt.tzinfo))
 
-    def test_set_tz(self):
-        @given(datetime.datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            self.ct2.set(dt, tz)
-            self.assertEqual(self.ct2._tz, pytz.timezone(tz))
-        test_it()
+    @given(datetimes())
+    def test_set_tz(self, dt):
+        self.ct2.set(dt, str(dt.tzinfo))
+        self.assertEqual(self.ct2._tz, pytz.timezone(str(dt.tzinfo)))
 
-    def test_set_datetime(self):
-        @given(naive_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            dt1 = dt.replace(tzinfo=pytz.utc)
-            ct1 = CityTime(dt1, tz)
-            self.assertEqual(ct1._datetime.tzinfo, pytz.timezone('UTC'))
-            self.assertEqual(ct1._datetime, dt1)
-        test_it()
+    @given(datetimes())
+    def test_set_datetime(self, dt):
+        ct1 = CityTime(dt, str(dt.tzinfo))
+        self.assertEqual(ct1._datetime.tzinfo, pytz.timezone('UTC'))
+        self.assertEqual(ct1._datetime, dt)
 
     def test_unset__str__(self):
         self.assertEqual(self.ct1.__str__(), 'CityTime object not set yet.')
 
-    def test__str__(self):
-        @given(naive_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            ct1 = CityTime(dt, tz)
-            dt_utc = dt.replace(tzinfo=pytz.utc)
-            # slicing [:-6] removes the timezone offset
-            self.assertEqual(str(ct1)[:-6], str(dt_utc)[:-6])
-        test_it()
+    @given(datetimes(allow_naive=True), st.sampled_from(list(pytz.common_timezones)))
+    def test__str__(self, dt, tz):
+        ct1 = CityTime(dt, tz)
+        dt_utc = dt.replace(tzinfo=pytz.utc)
+        # slicing [:-6] removes the timezone offset
+        self.assertEqual(str(ct1)[:-6], str(dt_utc)[:-6])
 
-    def test__eq__(self):
-        @given(datetime.datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            ct1 = CityTime(dt, tz)
-            ct2 = CityTime(dt, tz)
+    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    def test__eq__(self, dt, tz):
+        ct1 = CityTime(dt, tz)
+        ct2 = CityTime(dt, tz)
+        self.assertEqual(ct1, ct2)
+
+    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    def test__eq__to_datetime(self, dt, tz):
+        ct1 = self.ct1
+        ct1.set(dt, tz)
+        utc_time = self.ct1.utc()
+        self.assertEqual(ct1, utc_time)
+
+    @given(
+        datetimes(timezones=[]),
+        datetimes(timezones=[]),
+        st.sampled_from(pytz.common_timezones_set)
+    )
+    def test__ne__(self, dt1, dt2, tz):
+        assume(dt1 != dt2)
+        ct1 = CityTime(dt1, tz)
+        ct2 = CityTime(dt2, tz)
+        self.assertNotEqual(ct1, ct2)
+
+    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    def test__ne__non_datetime(self, dt, tz):
+        assume(self.datetime_min < dt < self.datetime_max)
+        ct1 = CityTime(dt, tz)
+        non_datetime = {}
+        self.assertNotEqual(ct1, non_datetime)
+
+    @given(
+        datetimes(timezones=[]),
+        datetimes(timezones=[]),
+        st.sampled_from(pytz.common_timezones_set)
+    )
+    def test__lt__(self, dt1, dt2, tz):
+        assume(dt2 < self.datetime_max)
+        assume(dt1 > self.datetime_min)
+        assume(dt1 < dt2)
+        ct1 = CityTime(dt1, tz)
+        ct2 = CityTime(dt2, tz)
+        self.assertLess(ct1, ct2)
+
+    @given(
+        datetimes(timezones=[]),
+        datetimes(timezones=[]),
+        st.sampled_from(pytz.common_timezones_set)
+    )
+    def test__le__(self, dt1, dt2, tz):
+        assume(dt2 < self.datetime_max)
+        assume(dt1 > self.datetime_min)
+        assume(dt1 <= dt2)
+        ct1 = CityTime(dt1, tz)
+        ct2 = CityTime(dt2, tz)
+        self.assertLessEqual(ct1, ct2)
+
+    @given(
+        datetimes(timezones=[]),
+        datetimes(timezones=[]),
+        st.sampled_from(pytz.common_timezones_set)
+    )
+    def test__gt__(self, dt1, dt2, tz):
+        assume(dt1 < self.datetime_max)
+        assume(dt2 > self.datetime_min)
+        assume(dt1 > dt2)
+        ct1 = CityTime(dt1, tz)
+        ct2 = CityTime(dt2, tz)
+        self.assertGreater(ct1, ct2)
+
+    @given(
+        datetimes(timezones=[]),
+        datetimes(timezones=[]),
+        st.sampled_from(pytz.common_timezones_set)
+    )
+    def test__ge__(self, dt1, dt2, tz):
+        assume(dt1 < self.datetime_max)
+        assume(dt2 > self.datetime_min)
+        assume(dt1 >= dt2)
+        ct1 = CityTime(dt1, tz)
+        ct2 = CityTime(dt2, tz)
+        self.assertGreaterEqual(ct1, ct2)
+
+    @given(datetimes(timezones=[]), st.integers(), st.sampled_from(pytz.common_timezones_set))
+    def test__add__(self, dt1, i, tz):
+        assume(-999999999 < i < 999999999)
+        td = datetime.timedelta(seconds=i)
+        if i > 0:
+            assume(dt1 < self.datetime_max - td)
+        elif i < 0:
+            assume(dt1 > self.datetime_min - td)
+        ct1 = CityTime(dt1, tz)
+        ct2 = CityTime(dt1, tz)
+        ci = int(i)
+        assert isinstance(ci, int)
+        ct2.increment(seconds=ci)
+        self.assertEqual(ct1 + td, ct2)
+        # check to see that ct1 is not changed, but that the method returned a new CityTime object
+        self.assertFalse(ct1 is ct1 + td)
+
+    @given(datetimes(timezones=[]), st.integers(), st.sampled_from(pytz.common_timezones_set))
+    def test__sub__(self, dt1, i, tz):
+        assume(abs(i) < 999999999)
+        td = datetime.timedelta(seconds=i)
+        if i > 0:
+            assume(dt1 < self.datetime_max - td)
+        elif i < 0:
+            assume(dt1 > self.datetime_min - td)
+        ct1 = CityTime(dt1, tz)
+        ct2 = CityTime(dt1, tz)
+        ct2.increment(seconds=-i)
+        self.assertEqual(ct1 - td, ct2)
+        # check to see that ct1 is not changed, but that the method returned a new CityTime object
+        self.assertFalse(ct1 is ct1 - td)
+
+    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    def test__hash__(self, dt, tz):
+        ct1 = CityTime(dt, tz)
+        self.assertEqual(ct1.__hash__(), ct1.utc().__hash__())
+
+    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    def test_utc(self, dt, tz):
+        ct1 = CityTime(dt, 'utc')
+        self.assertEqual(ct1.utc(), dt.replace(tzinfo=pytz.utc))
+
+    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    def test_utc_tzinfo(self, dt, tz):
+        ct1 = CityTime(dt, 'utc')
+        self.assertEqual(ct1.tzinfo(), pytz.utc)
+
+    @given(datetimes())
+    def test_local(self, dt):
+        assume(str(dt.tzinfo) in self.sample_timezones)
+        ct1 = CityTime(dt, str(dt.tzinfo))
+        self.assertEqual(ct1.local(), dt)
+
+    @given(datetimes())
+    def test_local_timezone(self, dt):
+        assume(str(dt.tzinfo) in self.sample_timezones)
+        ct1 = CityTime(dt, str(dt.tzinfo))
+        self.assertEqual(ct1.timezone(), str(dt.tzinfo))
+
+    @given(datetimes(), st.sampled_from(pytz.common_timezones_set))
+    def test_astimezone(self, dt, tz):
+        assume(str(dt.tzinfo) in pytz.common_timezones_set)
+        ct1 = CityTime(dt, str(dt.tzinfo))
+        self.assertEqual(
+            ct1.astimezone(tz),
+            dt.astimezone(pytz.timezone(tz))
+        )
+
+    @given(datetimes())
+    def test_local_minute(self, dt):
+        assume(str(dt.tzinfo) in self.sample_timezones)
+        ct1 = CityTime(dt, str(dt.tzinfo))
+        minutes = dt.hour * 60 + dt.minute
+        self.assertEqual(ct1.local_minute(), minutes)
+
+    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    def test_timezone(self, dt, tz):
+        ct1 = CityTime(dt, tz)
+        self.assertEqual(ct1.timezone(), tz)
+
+    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    def test_tzinfo(self, dt, tz):
+        ct1 = CityTime(dt, tz)
+        self.assertEqual(ct1.tzinfo(), pytz.timezone(tz))
+
+    @given(datetimes())
+    def test_weekday(self, dt):
+        assume(str(dt.tzinfo) in self.sample_timezones)
+        ct1 = CityTime(dt, str(dt.tzinfo))
+        self.assertEqual(ct1.weekday(), dt.weekday())
+
+    @given(datetimes())
+    def test_day_name(self, dt):
+        assume(str(dt.tzinfo) in self.sample_timezones)
+        ct1 = CityTime(dt, str(dt.tzinfo))
+        name = day_name[dt.weekday()]
+        self.assertEqual(ct1.day_name(), name)
+
+    @given(datetimes())
+    def test_day_abbr(self, dt):
+        weekdays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
+        assume(str(dt.tzinfo) in self.sample_timezones)
+        ct1 = CityTime(dt, str(dt.tzinfo))
+        name = day_name[dt.weekday()]
+        self.assertEqual(ct1.day_name(), name)
+        self.assertEqual(ct1.day_abbr(), weekdays[dt.weekday()])
+
+    @given(datetimes())
+    def test_time_string(self, dt):
+        assume(str(dt.tzinfo) in self.sample_timezones)
+        ct1 = CityTime(dt, str(dt.tzinfo))
+        time_string = dt.strftime('%H%M')
+        self.assertEqual(ct1.time_string(), time_string)
+
+    @given(
+        datetimes(timezones=[]),
+        st.sampled_from(pytz.common_timezones_set),
+        st.integers(),
+        st.integers(),
+        st.integers(),
+        st.integers(),
+    )
+    def test_increment(self, dt, tz, d, h, m, s):
+        assume(abs(d) < 99999)
+        assume(abs(h) < 9999999)
+        assume(abs(m) < 999999999)
+        assume(abs(s) < 999999999)
+        td = datetime.timedelta(days=d, hours=h, minutes=m, seconds=s)
+        if td > datetime.timedelta():
+            assume(dt < self.datetime_max - td)
+        elif td < datetime.timedelta():
+            assume(dt > self.datetime_min - td)
+        ct1 = CityTime(dt, tz)
+        ct2 = CityTime(dt, tz)
+        ct1.increment(days=d, hours=h, minutes=m, seconds=s)
+        if td == datetime.timedelta():
             self.assertEqual(ct1, ct2)
-        test_it()
-
-    def test__eq__to_datetime(self):
-        @given(datetime.datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            ct1 = self.ct1
-            ct1.set(dt, tz)
-            utc_time = self.ct1.utc()
-            self.assertEqual(ct1, utc_time)
-        test_it()
-
-    def test__ne__(self):
-        @given(naive_datetime, naive_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt1, dt2, tz):
-            assume(dt1 != dt2)
-            ct1 = CityTime(dt1, tz)
-            ct2 = CityTime(dt2, tz)
+        else:
             self.assertNotEqual(ct1, ct2)
-        test_it()
-
-    def test__ne__non_datetime(self):
-        @given(naive_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            assume(self.datetime_min < dt < self.datetime_max)
-            ct1 = CityTime(dt, tz)
-            non_datetime = {}
-            self.assertNotEqual(ct1, non_datetime)
-        test_it()
-
-    def test__lt__(self):
-        @given(naive_datetime, naive_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt1, dt2, tz):
-            assume(dt2 < self.datetime_max)
-            assume(dt1 > self.datetime_min)
-            assume(dt1 < dt2)
-            ct1 = CityTime(dt1, tz)
-            ct2 = CityTime(dt2, tz)
-            self.assertLess(ct1, ct2)
-        test_it()
-
-    def test__le__(self):
-        @given(naive_datetime, naive_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt1, dt2, tz):
-            assume(dt2 < self.datetime_max)
-            assume(dt1 > self.datetime_min)
-            assume(dt1 <= dt2)
-            ct1 = CityTime(dt1, tz)
-            ct2 = CityTime(dt2, tz)
-            self.assertLessEqual(ct1, ct2)
-        test_it()
-
-    def test__gt__(self):
-        @given(naive_datetime, naive_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt1, dt2, tz):
-            assume(dt1 < self.datetime_max)
-            assume(dt2 > self.datetime_min)
-            assume(dt1 > dt2)
-            ct1 = CityTime(dt1, tz)
-            ct2 = CityTime(dt2, tz)
-            self.assertGreater(ct1, ct2)
-        test_it()
-
-    def test__ge__(self):
-        @given(naive_datetime, naive_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt1, dt2, tz):
-            assume(dt1 < self.datetime_max)
-            assume(dt2 > self.datetime_min)
-            assume(dt1 >= dt2)
-            ct1 = CityTime(dt1, tz)
-            ct2 = CityTime(dt2, tz)
-            self.assertGreaterEqual(ct1, ct2)
-        test_it()
-
-    def test__add__(self):
-        @given(naive_datetime, int, sampled_from(self.sample_timezones))
-        def test_it(dt1, i, tz):
-            assume(-999999999 < i < 999999999)
-            td = datetime.timedelta(seconds=i)
-            if i > 0:
-                assume(dt1 < self.datetime_max - td)
-            elif i < 0:
-                assume(dt1 > self.datetime_min - td)
-            ct1 = CityTime(dt1, tz)
-            ct2 = CityTime(dt1, tz)
-            ci = int(i)
-            assert isinstance(ci, int)
-            print(ci)
-            ct2.increment(seconds=ci)
-            self.assertEqual(ct1 + td, ct2)
-            # check to see that ct1 is not changed, but that the method returned a new CityTime object
-            self.assertFalse(ct1 is ct1 + td)
-        test_it()
-
-    def test__sub__(self):
-        @given(naive_datetime, int, sampled_from(self.sample_timezones))
-        def test_it(dt1, i, tz):
-            assume(abs(i) < 999999999)
-            td = datetime.timedelta(seconds=i)
-            if i > 0:
-                assume(dt1 < self.datetime_max - td)
-            elif i < 0:
-                assume(dt1 > self.datetime_min - td)
-            ct1 = CityTime(dt1, tz)
-            ct2 = CityTime(dt1, tz)
-            ct2.increment(seconds=-i)
-            self.assertEqual(ct1 - td, ct2)
-            # check to see that ct1 is not changed, but that the method returned a new CityTime object
-            self.assertFalse(ct1 is ct1 - td)
-        test_it()
-
-    def test__hash__(self):
-        @given(datetime.datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            ct1 = CityTime(dt, tz)
-            self.assertEqual(ct1.__hash__(), ct1.utc().__hash__())
-        test_it()
-
-    def test_utc(self):
-        @given(naive_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            ct1 = CityTime(dt, 'utc')
-            self.assertEqual(ct1.utc(), dt.replace(tzinfo=pytz.utc))
-        test_it()
-
-    def test_utc_tzinfo(self):
-        @given(naive_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            ct1 = CityTime(dt, 'utc')
-            self.assertEqual(ct1.tzinfo(), pytz.utc)
-        test_it()
-
-    def test_local(self):
-        @given(timezone_aware_datetime)
-        def test_it(dt):
-            assume(str(dt.tzinfo) in self.sample_timezones)
-            ct1 = CityTime(dt, str(dt.tzinfo))
-            self.assertEqual(ct1.local(), dt)
-        test_it()
-
-    def test_local_timezone(self):
-        @given(timezone_aware_datetime)
-        def test_it(dt):
-            assume(str(dt.tzinfo) in self.sample_timezones)
-            ct1 = CityTime(dt, str(dt.tzinfo))
-            self.assertEqual(ct1.timezone(), str(dt.tzinfo))
-        test_it()
-
-    def test_astimezone(self):
-        @given(timezone_aware_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            assume(str(dt.tzinfo) in self.sample_timezones)
-            ct1 = CityTime(dt, str(dt.tzinfo))
-            self.assertEqual(
-                ct1.astimezone(tz),
-                dt.astimezone(pytz.timezone(tz))
-            )
-        test_it()
-
-    def test_local_minute(self):
-        @given(timezone_aware_datetime)
-        def test_it(dt):
-            assume(str(dt.tzinfo) in self.sample_timezones)
-            ct1 = CityTime(dt, str(dt.tzinfo))
-            minutes = dt.hour * 60 + dt.minute
-            self.assertEqual(ct1.local_minute(), minutes)
-        test_it()
-
-    def test_timezone(self):
-        @given(naive_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            ct1 = CityTime(dt, tz)
-            self.assertEqual(ct1.timezone(), tz)
-        test_it()
-
-    def test_tzinfo(self):
-        @given(naive_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            ct1 = CityTime(dt, tz)
-            self.assertEqual(ct1.tzinfo(), pytz.timezone(tz))
-        test_it()
-
-    def test_weekday(self):
-        @given(timezone_aware_datetime)
-        def test_it(dt):
-            assume(str(dt.tzinfo) in self.sample_timezones)
-            ct1 = CityTime(dt, str(dt.tzinfo))
-            self.assertEqual(ct1.weekday(), dt.weekday())
-        test_it()
-
-    def test_day_name(self):
-        @given(timezone_aware_datetime)
-        def test_it(dt):
-            assume(str(dt.tzinfo) in self.sample_timezones)
-            ct1 = CityTime(dt, str(dt.tzinfo))
-            name = day_name[dt.weekday()]
-            self.assertEqual(ct1.day_name(), name)
-        test_it()
-
-    def test_day_abbr(self):
-        @given(timezone_aware_datetime)
-        def test_it(dt):
-            weekdays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
-            assume(str(dt.tzinfo) in self.sample_timezones)
-            ct1 = CityTime(dt, str(dt.tzinfo))
-            name = day_name[dt.weekday()]
-            self.assertEqual(ct1.day_name(), name)
-            self.assertEqual(ct1.day_abbr(), weekdays[dt.weekday()])
-        test_it()
-
-    def test_time_string(self):
-        @given(timezone_aware_datetime)
-        def test_it(dt):
-            assume(str(dt.tzinfo) in self.sample_timezones)
-            ct1 = CityTime(dt, str(dt.tzinfo))
-            time_string = dt.strftime('%H%M')
-            self.assertEqual(ct1.time_string(), time_string)
-        test_it()
-
-    def test_increment(self):
-        @given(naive_datetime, sampled_from(self.sample_timezones), int, int, int, int)
-        def test_it(dt, tz, d, h, m, s):
-            assume(abs(d) < 99999)
-            assume(abs(h) < 9999999)
-            assume(abs(m) < 999999999)
-            assume(abs(s) < 999999999)
-            td = datetime.timedelta(days=d, hours=h, minutes=m, seconds=s)
-            if td > datetime.timedelta():
-                assume(dt < self.datetime_max - td)
-            elif td < datetime.timedelta():
-                assume(dt > self.datetime_min - td)
-            ct1 = CityTime(dt, tz)
-            ct2 = CityTime(dt, tz)
-            ct1.increment(days=d, hours=h, minutes=m, seconds=s)
-            if td == datetime.timedelta():
-                self.assertEqual(ct1, ct2)
-            else:
-                self.assertNotEqual(ct1, ct2)
-        test_it()
 
     def test_local_strftime(self):
         formats = ('%a', '%A', '%w', '%d', '%b', '%B', '%c', '%x', '%X')
@@ -380,83 +350,121 @@ class NegativeTests(unittest.TestCase):
         self.ct2.set(self.current_time, 'US/Eastern')
         self.assertFalse(self.ct1 != self.ct2)
 
-    def test__ne__true(self):
-        @given(one_of((int, bool, None, float, complex, str, bytes)))
-        def test_it(x):
-            ct1 = CityTime(self.early_time, 'US/Eastern')
-            self.assertNotEqual(ct1, x)
-        test_it()
+    @given(OneOfStrategy(strategies=(
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.floats(),
+        st.complex_numbers(),
+        st.text(),
+        st.binary()
+    )))
+    def test__ne__true(self, x):
+        ct1 = CityTime(self.early_time, 'US/Eastern')
+        self.assertNotEqual(ct1, x)
 
-    def test__ne__datetime(self):
-        @given(naive_datetime, sampled_from(self.sample_timezones))
-        def test_it(dt, tz):
-            assume(dt.minute != 1)
-            dt1 = dt.replace(tzinfo=pytz.utc)
-            ct1 = CityTime(dt1.replace(minute=1), tz)
-            self.assertNotEqual(ct1, dt1)
-        test_it()
+    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    def test__ne__datetime(self, dt, tz):
+        assume(dt.minute != 1)
+        dt1 = dt.replace(tzinfo=pytz.utc)
+        ct1 = CityTime(dt1.replace(minute=1), tz)
+        self.assertNotEqual(ct1, dt1)
 
-    def test__lt__(self):
-        @given(one_of((int, bool, None, float, complex, str, bytes)))
-        def test_it(x):
-            self.ct1.set(self.early_time, 'US/Eastern')
-            with self.assertRaises(TypeError):
-                self.ct1 < x
-        test_it()
+    @given(OneOfStrategy(strategies=(
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.floats(),
+        st.complex_numbers(),
+        st.text(),
+        st.binary()
+    )))
+    def test__lt__(self, x):
+        self.ct1.set(self.early_time, 'US/Eastern')
+        with self.assertRaises(TypeError):
+            self.ct1 < x
 
-    def test__le__(self):
-        @given(one_of((int, bool, None, float, complex, str, bytes)))
-        def test_it(x):
-            self.ct1.set(self.early_time, 'US/Eastern')
-            with self.assertRaises(TypeError):
-                self.ct1 <= x
-        test_it()
+    @given(OneOfStrategy(strategies=(
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.floats(),
+        st.complex_numbers(),
+        st.text(),
+        st.binary()
+    )))
+    def test__le__(self, x):
+        self.ct1.set(self.early_time, 'US/Eastern')
+        with self.assertRaises(TypeError):
+            self.ct1 <= x
 
-    def test__gt__(self):
-        @given(one_of((int, bool, None, float, complex, str, bytes)))
-        def test_it(x):
-            self.ct1.set(self.early_time, 'US/Eastern')
-            with self.assertRaises(TypeError):
-                self.ct1 > x
-        test_it()
+    @given(OneOfStrategy(strategies=(
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.floats(),
+        st.complex_numbers(),
+        st.text(),
+        st.binary()
+    )))
+    def test__gt__(self, x):
+        self.ct1.set(self.early_time, 'US/Eastern')
+        with self.assertRaises(TypeError):
+            self.ct1 > x
 
-    def test__ge__(self):
-        @given(one_of((int, bool, None, float, complex, str, bytes)))
-        def test_it(x):
-            self.ct1.set(self.early_time, 'US/Eastern')
-            with self.assertRaises(TypeError):
-                self.ct1 >= x
-        test_it()
+    @given(OneOfStrategy(strategies=(
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.floats(),
+        st.complex_numbers(),
+        st.text(),
+        st.binary()
+    )))
+    def test__ge__(self, x):
+        self.ct1.set(self.early_time, 'US/Eastern')
+        with self.assertRaises(TypeError):
+            self.ct1 >= x
 
-    def test_set_dt(self):
-        @given(one_of((int, bool, None, float, complex, str, bytes)))
-        def test_it(x):
-            self.ct1.set(self.early_time, 'US/Eastern')
-            with self.assertRaises((AttributeError, TypeError)):
-                self.ct1.set(x, 'US/Eastern')
-        test_it()
+    @given(OneOfStrategy(strategies=(
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.floats(),
+        st.complex_numbers(),
+        st.text(),
+        st.binary()
+    )))
+    def test_set_dt(self, x):
+        self.ct1.set(self.early_time, 'US/Eastern')
+        with self.assertRaises((AttributeError, TypeError)):
+            self.ct1.set(x, 'US/Eastern')
 
-    def test_set_tz(self):
-        @given(one_of((int, bool, None, float, complex, str, bytes)))
-        def test_it(x):
-            self.ct1.set(self.early_time, 'US/Eastern')
-            with self.assertRaises(UnknownTimeZoneError):
-                self.ct1.set(self.current_time, x)
-        test_it()
+    @given(OneOfStrategy(strategies=(
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.floats(),
+        #st.complex_numbers(),
+        st.text(),
+        st.binary()
+    )))
+    def test_set_tz(self, x):
+        self.ct1.set(self.early_time, 'US/Eastern')
+        with self.assertRaises((UnknownTimeZoneError, AttributeError)):
+            self.ct1.set(self.current_time, x)
 
     def test_set_unknown_tz(self):
         with self.assertRaises(pytz.exceptions.UnknownTimeZoneError):
             self.ct1.set(self.current_time, 'US/Moscow')
 
-    def test_set_date_instead_of_datetime(self):
-        @given(int)
-        def test_it(y):
-            assume(0 < y < 9999)
-            date = datetime.date(y, 1, 1)
-            self.ct1.set(self.early_time, 'US/Eastern')
-            with self.assertRaises(TypeError):
-                self.ct1.set(date, 'US/Eastern')
-        test_it()
+    @given(st.integers())
+    def test_set_date_instead_of_datetime(self, y):
+        assume(0 < y < 9999)
+        date = datetime.date(y, 1, 1)
+        self.ct1.set(self.early_time, 'US/Eastern')
+        with self.assertRaises(TypeError):
+            self.ct1.set(date, 'US/Eastern')
 
     def test_set_nonexistent_time(self):
         self.assertRaises(
@@ -500,13 +508,11 @@ class NegativeTests(unittest.TestCase):
         self.ct1.set(self.current_time, 'US/Eastern')
         self.assertTrue(self.ct1)
 
-    def test_increment_wrong_type(self):
-        @given(one_of((bool, None, float, complex, str, bytes)))
-        def test_it(x):
-            ct1 = CityTime(self.current_time, 'US/Eastern')
-            with self.assertRaises((TypeError, ValueError)):
-                ct1.increment(x)
-        test_it()
+    @given(OneOfStrategy(strategies=(st.complex_numbers(), st.text(), st.binary())))
+    def test_increment_wrong_type(self, x):
+        ct1 = CityTime(self.current_time, 'US/Eastern')
+        with self.assertRaises((TypeError, ValueError)):
+            ct1.increment(x)
 
     def test_increment_no_data(self):
         self.ct1.set(self.current_time, 'US/Eastern')
@@ -543,6 +549,11 @@ class NegativeTests(unittest.TestCase):
         self.assertRaises(ValueError, callable_obj, test_zone)
         test_zone = 'Idontknow/WhereToGo'
         self.assertRaises(UnknownTimeZoneError, callable_obj, test_zone)
+
+
+def timezones():
+    return pytz.common_timezones
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -446,7 +446,7 @@ class CityTime(object):
 
         try:
             tz = pytz.timezone(time_zone)
-        except pytz.exceptions.UnknownTimeZoneError:
+        except (pytz.exceptions.UnknownTimeZoneError):
             raise UnknownTimeZoneError(time_zone)
 
         if getattr(date_time, 'tzinfo', None) == pytz.timezone('UTC'):
@@ -632,9 +632,7 @@ class CityTime(object):
 
         if days is None and hours is None and minutes is None and seconds is None:
             raise ValueError('Parameters missing.')
-        seconds = int(seconds)
         if not all(isinstance(x, (int, float)) for x in [days, hours, minutes, seconds] if x is not None):
-            print('{}:{}'.format(type(seconds), seconds))
             raise TypeError('Increment parameters must be of type <int> or <float>')
         increment = datetime.timedelta()
         if days:
