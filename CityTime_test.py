@@ -1,5 +1,5 @@
 import unittest
-from CityTime import CityTime
+from citytime import CityTime
 from calendar import day_name
 import datetime
 import pytz
@@ -54,12 +54,19 @@ class PositiveTests(unittest.TestCase):
     def test_unset__str__(self):
         self.assertEqual(self.ct1.__str__(), 'CityTime object not set yet.')
 
-    @given(datetimes(allow_naive=True), st.sampled_from(list(pytz.common_timezones)))
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
     def test__str__(self, dt, tz):
         ct1 = CityTime(dt, tz)
         dt_utc = dt.replace(tzinfo=pytz.utc)
         # slicing [:-6] removes the timezone offset
         self.assertEqual(str(ct1)[:-6], str(dt_utc)[:-6])
+
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
+    def test__repr__(self, dt, tz):
+        ct1 = CityTime(dt, tz)
+        dt_utc = dt.replace(tzinfo=pytz.utc)
+        # slicing [:-6] removes the timezone offset
+        self.assertEqual(ct1.__repr__()[:-6], str(dt_utc)[:-6])
 
     @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
     def test__eq__(self, dt, tz):
@@ -173,6 +180,7 @@ class PositiveTests(unittest.TestCase):
         ct2 = CityTime(dt1, tz)
         ct2.increment(seconds=-i)
         self.assertEqual(ct1 - td, ct2)
+        self.assertEqual(ct1 - ct2, td)
         # check to see that ct1 is not changed, but that the method returned a new CityTime object
         self.assertFalse(ct1 is ct1 - td)
 
