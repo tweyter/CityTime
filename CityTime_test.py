@@ -1,7 +1,7 @@
 import unittest
-from citytime import CityTime
 from calendar import day_name
 import datetime
+
 import pytz
 from pytz.exceptions import NonExistentTimeError, AmbiguousTimeError
 from pytz.exceptions import UnknownTimeZoneError
@@ -9,6 +9,8 @@ from hypothesis import given, assume
 import hypothesis.strategies as st
 from hypothesis.searchstrategy.strategies import OneOfStrategy
 from hypothesis.extra.datetime import datetimes
+
+from citytime import CityTime, Range
 
 
 class PositiveTests(unittest.TestCase):
@@ -189,13 +191,13 @@ class PositiveTests(unittest.TestCase):
         ct1 = CityTime(dt, tz)
         self.assertEqual(ct1.__hash__(), ct1.utc().__hash__())
 
-    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
-    def test_utc(self, dt, tz):
+    @given(datetimes(timezones=[]))
+    def test_utc(self, dt):
         ct1 = CityTime(dt, 'utc')
         self.assertEqual(ct1.utc(), dt.replace(tzinfo=pytz.utc))
 
-    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
-    def test_utc_tzinfo(self, dt, tz):
+    @given(datetimes(timezones=[]))
+    def test_utc_tzinfo(self, dt):
         ct1 = CityTime(dt, 'utc')
         self.assertEqual(ct1.tzinfo(), pytz.utc)
 
@@ -453,7 +455,6 @@ class NegativeTests(unittest.TestCase):
         st.booleans(),
         st.none(),
         st.floats(),
-        #st.complex_numbers(),
         st.text(),
         st.binary()
     )))
@@ -531,19 +532,18 @@ class NegativeTests(unittest.TestCase):
         pass
 
     def test_local_strftime(self):
-        formats = ('%+', '%[')
-        test_time = self.ct1
-        test_time.set(self.current_time, str(self.current_time.tzinfo))
+        formats = ('%B', '%c')
+        test_dt = datetime.datetime(2015, 7, 1, 0, 0, 0, tzinfo=pytz.timezone('UTC'))
+        test_time = CityTime(test_dt, 'UTC')
         for form in formats:
-            self.assertEqual(test_time.local_strftime(form), None)
+            self.assertEqual(test_time.local_strftime(form), test_dt.strftime(form))
 
     def test_utc_strftime(self):
-        formats = ('%+', '%[')
-        test_time = self.ct1
-        test_time.set(self.current_time, str(self.current_time.tzinfo))
-        test_utc = test_time.utc()
+        formats = ('%B', '%c')
+        test_dt = datetime.datetime(2015, 7, 1, 0, 0, 0, tzinfo=pytz.timezone('UTC'))
+        test_time = CityTime(test_dt, 'UTC')
         for form in formats:
-            self.assertEqual(test_time.utc_strftime(form), None)
+            self.assertEqual(test_time.utc_strftime(form), test_dt.strftime(form))
 
     def test_today(self):
         """
@@ -557,6 +557,473 @@ class NegativeTests(unittest.TestCase):
         self.assertRaises(ValueError, callable_obj, test_zone)
         test_zone = 'Idontknow/WhereToGo'
         self.assertRaises(UnknownTimeZoneError, callable_obj, test_zone)
+
+
+# noinspection PyTypeChecker
+class RangeTests(unittest.TestCase):
+    def setUp(self):
+        self.start_time = CityTime(datetime.datetime(2015, 12, 31, 23, 59), 'UTC')
+        self.end_time = CityTime(datetime.datetime(2016, 1, 1, 0, 1), 'UTC')
+
+    def test_empty_init(self):
+        r = Range()
+        self.assertEqual(r._members, set())
+
+    def test_partial_init(self):
+        r = Range(self.start_time)
+        self.assertEqual(r._members, set())
+
+    def test_full_init(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertNotEqual(r._members, set())
+
+    def test_create_range(self):
+        r = Range()
+        r._create_range(self.start_time, self.end_time)
+        self.assertEqual(r._members, {self.start_time, self.end_time})
+
+    def test_create_range_not_city_time(self):
+        r = Range()
+        self.assertRaises(ValueError, r._create_range, self.start_time, 2)
+
+    def test_create_range_city_time_not_set(self):
+        r = Range()
+        self.assertRaises(ValueError, r._create_range, self.start_time, CityTime())
+
+    def test_start_time(self):
+        r = Range(self.end_time, self.start_time)  # purposely reversing the order
+        self.assertEqual(r.start_time(), self.start_time)
+
+    def test_end_time(self):
+        r = Range(self.end_time, self.start_time)  # purposely reversing the order
+        self.assertEqual(r.end_time(), self.end_time)
+
+    def test_create_range_timedelta(self):
+        r = Range()
+        r._create_range_timedelta(self.start_time, datetime.timedelta(minutes=1))
+        check = map(lambda x: isinstance(x, CityTime), r._members)
+        self.assertTrue(all(check))
+
+    def test_create_range_timedelta_using_init(self):
+        r = Range(self.start_time, datetime.timedelta(minutes=1))
+        check = map(lambda x: isinstance(x, CityTime), r._members)
+        self.assertTrue(all(check))
+
+    def test_create_range_bad_data(self):
+        r = Range()
+        self.assertRaises(ValueError, r._create_range_timedelta, 2, datetime.timedelta())
+        self.assertRaises(ValueError, r._create_range_timedelta, CityTime(), datetime.timedelta())
+        self.assertRaises(ValueError, r._create_range_timedelta, self.start_time, 2)
+
+    def test_check_set(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertTrue(r.check_set())
+
+    def test_check_set_false(self):
+        r = Range()
+        self.assertFalse(r.check_set())
+
+    def test_delta(self):
+        """
+        Test for the delta method which calculates the timedelta between start time and
+        end time.
+
+        start_time and end_time must be set to CityTime objects, and each
+        CityTime object must be set to a valid time.
+
+        The method should return a valid datetime.timedelta.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        self.assertEqual(r.delta(), self.end_time - self.start_time)
+
+    def test_delta_not_set(self):
+        r = Range()
+        self.assertRaises(ValueError, r.delta)
+
+    def test_contains_range(self):
+        """
+        Test for the contains method which determines if the start and end times of
+        one Range object fall entirely within the start and end times of another
+        Range object.
+
+        Assumes that both Range objects are set with valid CityTimes.
+        The contains method should return a boolean.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        contained = Range(self.start_time, self.end_time)
+        self.assertTrue(r.contains(contained))
+
+    def test_contains_citytime(self):
+        """
+        Test for the contains method to see that it can also test for
+        an individual CityTime object to be contained within the range.
+        @return:
+        """
+
+        r = Range(self.start_time, self.end_time)
+        contained = self.start_time
+        self.assertTrue(r.contains(contained))
+
+    def test_contains_false(self):
+        r = Range(self.start_time, self.end_time)
+        not_contained = Range(self.end_time, datetime.timedelta(hours=-1))
+        self.assertFalse(r.contains(not_contained))
+
+    def test_overlaps(self):
+        """
+        Test for the overlaps method which determines if either the start time
+        or end time of another Range object falls within the range of the current
+        Range object.
+
+        Assumes that both Range objects are set with valid CityTimes.
+        The overlaps method should return a boolean.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        overlap_range = Range(self.start_time, datetime.timedelta(days=100))
+        self.assertTrue(r.overlaps(overlap_range))
+
+    def test_overlaps_start_time(self):
+        """
+        Similar test to test_overlaps, but this time we overlap the start time instead
+        of the end time.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        overlap_range = Range(self.end_time, datetime.timedelta(days=-100))
+        self.assertTrue(r.overlaps(overlap_range))
+
+    def test_overlaps_with_contained_range(self):
+        """
+        Another test of the overlaps method, but with a range that is entirely
+        contained within the Range object.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        overlap_range = Range(self.start_time, self.end_time)
+        self.assertTrue(r.overlaps(overlap_range))
+
+    def test_overlaps_false(self):
+        r = Range(self.start_time, self.end_time)
+        new_start_time = self.start_time.copy()
+        new_start_time.increment(days=-1)
+        non_overlap = Range(new_start_time, datetime.timedelta(hours=1))
+        self.assertFalse(r.overlaps(non_overlap))
+
+    def test_overlap(self):
+        """
+        Test for the overlap method, which determines how much of one Range object
+        overlaps with another Range object.
+
+        Assumes that both Range objects are set with valid CityTimes.
+        The overlap method should return a datetime.timedelta.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        overlap_range = Range(self.start_time, datetime.timedelta(days=100))
+        self.assertEqual(r.overlap(overlap_range), r.delta())
+
+    def test_overlap_start_time(self):
+        """
+        Similar to test_overlap, but tests a trip that overlaps the start_time
+        of the base Range object.
+
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        new_start_time = self.start_time.copy()
+        new_start_time.increment(hours=-100)
+        overlap_range = Range(new_start_time, self.end_time)
+        self.assertEqual(r.overlap(overlap_range), r.delta())
+
+    def test_not_overlapping(self):
+        r = Range(self.start_time, self.end_time)
+        new_start_time = self.start_time.copy()
+        new_start_time.increment(days=-1)
+        non_overlap = Range(new_start_time, datetime.timedelta(hours=1))
+        self.assertEqual(r.overlap(non_overlap), datetime.timedelta())
+
+    def test_same_as(self):
+        """
+        Test of equality that returns True if both start times and end times are
+        equal to each other.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        equals = Range(self.start_time, self.end_time)
+        self.assertTrue(r == equals)
+
+    def test_not_same(self):
+        """
+        Test of inequality between Range objects.
+
+        Returns True if either the start_times don't match or the end_times don't match.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        new_start_time = self.start_time.copy()
+        new_start_time.increment(minutes=1)
+        equals = Range(new_start_time, self.end_time)
+        self.assertTrue(r != equals)
+
+    def test_before_(self):
+        r = Range(self.start_time, self.end_time)
+        new_end_time = self.end_time.copy()
+        new_end_time.increment(hours=-1)
+        lesser = Range(new_end_time, new_end_time)
+        self.assertTrue(lesser < r)
+
+    def test_before_wrong_type(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(TypeError):
+            r < 2
+
+    def test_after(self):
+        r = Range(self.start_time, self.end_time)
+        new_end_time = self.end_time.copy()
+        new_end_time.increment(hours=-1)
+        lesser = Range(new_end_time, new_end_time)
+        self.assertTrue(r > lesser)
+
+    def test_after_wrong_type(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(TypeError):
+            r > 2
+
+    def test__eq__(self):
+        r = Range(self.start_time, self.end_time)
+        s = Range(self.start_time, self.end_time)
+        self.assertTrue(r == s)
+
+    def test__ne__(self):
+        r = Range(self.start_time, self.end_time)
+        s = r.copy()
+        s.extend(datetime.timedelta(seconds=1))
+        self.assertTrue(r != s)
+
+    def test__lt__(self):
+        r = Range(self.start_time, self.end_time)
+        s = r.copy()
+        s.extend(datetime.timedelta(seconds=1))
+        self.assertTrue(r < s)
+
+    def test__le__(self):
+        r = Range(self.start_time, self.end_time)
+        s = r.copy()
+        self.assertTrue(r <= s)
+        s.extend(datetime.timedelta(seconds=1))
+        self.assertTrue(r <= s)
+
+    def test__gt__(self):
+        r = Range(self.start_time, self.end_time)
+        s = r.copy()
+        s.extend(datetime.timedelta(seconds=1))
+        self.assertTrue(s > r)
+
+    def test__ge__(self):
+        r = Range(self.start_time, self.end_time)
+        s = r.copy()
+        self.assertTrue(s >= r)
+        s.extend(datetime.timedelta(seconds=1))
+        self.assertTrue(s >= r)
+
+    def test__str__(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertEqual(
+            r.__str__(),
+            "Range: start: {} - end: {}".format(
+                self.start_time.__str__(),
+                self.end_time.__str__()
+            )
+        )
+
+    def test__repr__(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertEqual(
+            r.__repr__(),
+            "Range: start: {} - end: {}".format(
+                self.start_time.__str__(),
+                self.end_time.__str__()
+            )
+        )
+
+    def test__bool__(self):
+        r = Range()
+        self.assertFalse(r)
+
+    def test_extend(self):
+        """
+        Test for the extend method, which extends (ie. sets to a later time)
+        the end_time of the Range object by the given timedelta.
+
+        Assumes that the argument is a datetime.timedelta and that its value is positive.
+        Assumes that the Range object is set.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        delta = r.delta()
+        extension = datetime.timedelta(days=1)
+        r.extend(extension)
+        self.assertEqual(r.delta(), delta + extension)
+
+    def test_extend_wrong_type(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertRaises(TypeError, r.extend, 2)
+
+    def test_extend_negative_delta(self):
+        r = Range(self.start_time, self.end_time)
+        delta = datetime.timedelta(days=-1)
+        self.assertRaises(ValueError, r.extend, delta)
+
+    def test_extend_prior(self):
+        """
+        Test for the extend_prior method, which extends (ie. sets to an earlier time)
+        the start_time of the Range object by the given timedelta.
+
+        Assumes that the argument is a datetime.timedelta and that its value is positive.
+        Assumes that the Range object is set.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        delta = r.delta()
+        extension = datetime.timedelta(days=1)
+        r.extend_prior(extension)
+        self.assertEqual(r.delta(), delta + extension)
+
+    def test_extend_prior_wrong_type(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertRaises(TypeError, r.extend_prior, 2)
+
+    def test_extend_prior_negative_delta(self):
+        r = Range(self.start_time, self.end_time)
+        delta = datetime.timedelta(days=-1)
+        self.assertRaises(ValueError, r.extend_prior, delta)
+
+    def test_replace_start_time(self):
+        """
+        Test for the replace_start_time method, which alters the current Range object
+        by assigning it a new start_time value.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        new_start_time = self.start_time.copy()
+        new_start_time.increment(minutes=1)
+        r.replace_start_time(new_start_time)
+        self.assertEqual(r, Range(new_start_time, self.end_time))
+
+    def test_replace_start_time_wrong_type(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertRaises(TypeError, r.replace_start_time, 2)
+
+    def test_replace_end_time(self):
+        """
+        Test for the replace_end_time method, which alters the current Range object
+        by assigning it a new end_time value.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        new_end_time = self.end_time.copy()
+        new_end_time.increment(minutes=1)
+        r.replace_end_time(new_end_time)
+        self.assertEqual(r, Range(self.start_time, new_end_time))
+
+    def test_replace_end_time_end_type(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertRaises(TypeError, r.replace_end_time, 2)
+
+    def test_intersection(self):
+        """
+        Test for the intersection method, which creates a new Range object out of the
+        where the two Range objects overlap.
+
+        Assumes that both Range objects are set with valid CityTimes.
+        The intersection method should return a new Range object.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        new_start_time = self.end_time.copy()
+        new_start_time.increment(minutes=-1)
+        new_end_time = self.end_time.copy()
+        new_end_time.increment(minutes=1)
+        intersector = Range(new_start_time, new_end_time)
+        self.assertEqual(
+            r.intersection(intersector),
+            Range(new_start_time, self.end_time)
+        )
+
+    def test_intersection_contained(self):
+        """
+        Test for a range that is smaller than, and entirely contained within,
+        the current object.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        new_start_time = self.start_time
+        new_start_time.increment(minutes=1)
+        new_end_time = self.end_time
+        new_end_time.increment(minutes=-1)
+        contained = Range(new_start_time, new_end_time)
+        self.assertEqual(r.intersection(contained), contained)
+
+    def test_intersection__gt__(self):
+        """
+        Test to see that a Range object that is entirely outside of (greater than)
+        the current object returns a value of None.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        new_start_time = self.end_time.copy()
+        new_start_time.increment(minutes=1)
+        greater = Range(new_start_time, new_start_time)
+        self.assertIsNone(r.intersection(greater))
+
+    def test_intersection__lt__(self):
+        """
+        Test to see that a Range object that is entirely outside of (less than)
+        the current object returns a value of None.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        new_start_time = self.start_time.copy()
+        new_start_time.increment(minutes=-1)
+        lesser = Range(new_start_time, new_start_time)
+        self.assertIsNone(r.intersection(lesser))
+
+    def test_copy(self):
+        """
+        Test of the copy method, which returns a deep copy of the Range instance.
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        copied = r.copy()
+
+        # Check to see that the two objects have the same value
+        self.assertEqual(r, copied)
+
+        # Check to see that they are unique objects.
+        self.assertNotEqual(id(r), id(copied))
+
+        # Check to see that the start_times are unique objects
+        self.assertNotEqual(id(r.start_time()), id(copied.start_time()))
+
+        # Check to see that the end_times are unique objects
+        self.assertNotEqual(id(r.end_time()), id(copied.end_time()))
+
+    def test_shift(self):
+        r = Range(self.start_time, self.end_time)
+        start_check = self.start_time.copy()
+        start_check.increment(days=1)
+        end_check = self.end_time.copy()
+        end_check.increment(days=1)
+        r.shift(datetime.timedelta(days=1))
+        self.assertEqual(r.start_time(), start_check)
+        self.assertEqual(r.end_time(), end_check)
+
+    def test_shift_wrong_type(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertRaises(TypeError, r.shift, 2)
 
 
 def timezones():
