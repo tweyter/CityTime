@@ -1139,26 +1139,6 @@ class RangeHypothesisTests(unittest.TestCase):
         self.assertEqual(r2.delta(), r3.overlap(r1))
 
 
-    @given(datetimes(timezones=[]), datetimes(timezones=[]), st.integers(min_value=0))
-    def test_sameness(self, dt1, dt2, delta):
-        assume(dt1 != dt2)
-        assume(overflow(dt1, delta))
-        assume(overflow(dt2, delta))
-        r1 = Range(CityTime(dt1, 'UTC'), datetime.timedelta(seconds=delta))
-        r2 = Range(CityTime(dt2, 'UTC'), datetime.timedelta(seconds=delta))
-        self.assertRaises(TypeError, r1.not_same, None)
-        self.assertFalse(r1.same_as(r2))
-        self.assertFalse(r2.same_as(r1))
-        self.assertTrue(r1.not_same(r2))
-        self.assertTrue(r2.not_same(r1))
-
-
-# noinspection PyTypeChecker
-class RangeExceptionHandling(unittest.TestCase):
-    def test_same_as(self):
-        r = Range(CityTime(datetime.datetime.now(), 'UTC'), datetime.timedelta())
-        self.assertFalse(r.same_as(None))
-
 def overflow(date_time, time_delta):
     try:
         date_time + datetime.timedelta(seconds=time_delta)
