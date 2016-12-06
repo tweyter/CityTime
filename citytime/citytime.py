@@ -438,7 +438,7 @@ class CityTime(object):
             raise UnknownTimeZoneError("Can't subtract regular datetime from CityTime object due to lack of"
                                        " Olson timezone database information.")
         else:
-            raise ValueError("Can't subtract type %s from CityTime object" % type(other))
+            raise TypeError("Can't subtract type %s from CityTime object" % type(other))
 
     def set(self, date_time, time_zone):
 
@@ -694,12 +694,8 @@ class CityTime(object):
         @rtype: str
         """
         local_datetime = self.local()
-        try:
-            result = local_datetime.strftime(form)
-        except ValueError:
-            return
-        else:
-            return result
+        result = local_datetime.strftime(form)
+        return result
 
     def utc_strftime(self, form):
         """
@@ -712,12 +708,8 @@ class CityTime(object):
         @rtype: str
         """
         utc_datetime = self.utc()
-        try:
-            result = utc_datetime.strftime(form)
-        except ValueError:
-            return
-        else:
-            return result
+        result = utc_datetime.strftime(form)
+        return result
 
     @classmethod
     def today(cls):

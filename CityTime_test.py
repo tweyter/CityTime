@@ -53,6 +53,14 @@ class PositiveTests(unittest.TestCase):
         self.assertEqual(ct1._datetime.tzinfo, pytz.timezone('UTC'))
         self.assertEqual(ct1._datetime, dt)
 
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
+    def test_set_with_citytime(self, dt, tz):
+        sample = CityTime(dt, tz)
+        test_time = CityTime(time=sample)
+        self.assertEqual(test_time._tz, sample._tz)
+        self.assertEqual(test_time._datetime, sample._datetime)
+        self.assertEqual(test_time._t_zone, sample._t_zone)
+
     def test_unset__str__(self):
         self.assertEqual(self.ct1.__str__(), 'CityTime object not set yet.')
 
@@ -343,6 +351,9 @@ class NegativeTests(unittest.TestCase):
         self.assertRaises(TypeError, CityTime, 'int')
         self.assertRaises(TypeError, CityTime, 42)
 
+    def test__repr__(self):
+        self.assertEqual(self.ct1.__repr__(), "CityTime object not set yet.")
+
     def test__eq__(self):
         self.ct1.set(self.early_time, 'US/Eastern')
         self.ct1.check_set()
@@ -408,6 +419,10 @@ class NegativeTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             self.ct1 <= x
 
+    def test__le_set(self):
+        with self.assertRaises(ValueError):
+            self.ct1 <= self.ct2
+
     @given(OneOfStrategy(strategies=(
         st.integers(),
         st.booleans(),
@@ -449,6 +464,14 @@ class NegativeTests(unittest.TestCase):
         self.ct1.set(self.early_time, 'US/Eastern')
         with self.assertRaises((AttributeError, TypeError)):
             self.ct1.set(x, 'US/Eastern')
+
+    def test_set__sub__(self):
+        with self.assertRaises(UnknownTimeZoneError):
+            self.ct1 - datetime.datetime.now()
+
+    def test_set__sub__other(self):
+        with self.assertRaises(TypeError):
+            self.ct1 - 2
 
     @given(OneOfStrategy(strategies=(
         st.integers(),
@@ -557,6 +580,41 @@ class NegativeTests(unittest.TestCase):
         self.assertRaises(ValueError, callable_obj, test_zone)
         test_zone = 'Idontknow/WhereToGo'
         self.assertRaises(UnknownTimeZoneError, callable_obj, test_zone)
+
+    def test_utc(self):
+        self.assertRaises(ValueError, self.ct1.utc)
+
+    def test_local(self):
+        self.assertRaises(ValueError, self.ct1.local)
+
+    def test_local_minute(self):
+        self.assertRaises(ValueError, self.ct1.local_minute)
+
+    def test_timezone(self):
+        self.assertRaises(ValueError, self.ct1.timezone)
+
+    def test_tzinfo(self):
+        self.assertRaises(ValueError, self.ct1.tzinfo)
+
+    def test_weekday(self):
+        self.assertRaises(ValueError, self.ct1.weekday)
+
+    def test_day_name(self):
+        self.assertRaises(ValueError, self.ct1.day_name)
+
+    def test_day_abbr(self):
+        self.assertRaises(ValueError, self.ct1.day_abbr)
+
+    def test_time_string(self):
+        self.assertRaises(ValueError, self.ct1.time_string)
+
+    def test_increment(self):
+        with self.assertRaises(ValueError):
+            self.ct1.increment(days=1)
+
+    def test_increment2(self):
+        with self.assertRaises(ValueError):
+            self.ct1.increment(days=1)
 
 
 # noinspection PyTypeChecker
