@@ -10,7 +10,7 @@ import hypothesis.strategies as st
 from hypothesis.searchstrategy.strategies import OneOfStrategy
 from hypothesis.extra.datetime import datetimes
 
-from citytime import CityTime, Range
+from citytime.citytime import CityTime, Range
 
 
 class PositiveTests(unittest.TestCase):
@@ -639,7 +639,7 @@ class RangeTests(unittest.TestCase):
 
     def test_delta_not_set(self):
         r = Range()
-        self.assertRaises(ValueError, r.delta)
+        self.assertEqual(r.delta(), datetime.timedelta())
 
     def test_contains_range(self):
         """
@@ -1025,6 +1025,147 @@ class RangeTests(unittest.TestCase):
         r = Range(self.start_time, self.end_time)
         self.assertRaises(TypeError, r.shift, 2)
 
+
+class RangeHypothesisTests(unittest.TestCase):
+
+    @given(datetimes(timezones=[]), datetimes(timezones=[]))
+    def test__init__(self, dt, dt2):
+        assume(dt <= dt2)
+        start_time = CityTime(dt, 'UTC')
+        end_time = CityTime(dt2, 'UTC')
+        r1 = Range(start_time, end_time)
+        self.assertEqual(r1._members, {start_time, end_time})
+
+    @given(datetimes(timezones=[]), st.integers())
+    def test__init__timedelta(self, dt, delta):
+        assume(overflow(dt, delta))
+        start_time = CityTime(dt, 'UTC')
+        td = datetime.timedelta(seconds=delta)
+        end_time = CityTime(dt, 'UTC')
+        end_time.increment(seconds=delta)
+        r = Range(start_time, td)
+        self.assertEqual(r._members, {start_time, end_time})
+
+    @given(datetimes(timezones=[]), datetimes(timezones=[]))
+    def test_start_time(self, start, end):
+        assume(start <= end)
+        start_time = CityTime(start, 'UTC')
+        r = Range(start_time, CityTime(end, 'UTC'))
+        self.assertEqual(start_time, r.start_time())
+
+    @given(datetimes(timezones=[]), datetimes(timezones=[]))
+    def test_end_time(self, start, end):
+        assume(start <= end)
+        end_time = CityTime(start, 'UTC')
+        r = Range(CityTime(end, 'UTC'), end_time)
+        self.assertEqual(end_time, r.start_time())
+
+    @given(datetimes(timezones=[]), st.integers())
+    def test_delta(self, dt, delta):
+
+        assume(overflow(dt.replace(microsecond=0), delta))
+        start_time = CityTime(dt.replace(microsecond=0), 'UTC')
+        td = datetime.timedelta(seconds=delta)
+        r = Range(start_time, td)
+        if delta >= 0:
+            self.assertEqual(r.delta(), td)
+        else:
+            self.assertEqual(r.delta(), -td)
+
+    @given(datetimes(timezones=[]), st.integers(min_value=0), st.integers(min_value=0))
+    def test_contains(self, dt, delta1, delta2):
+        time = dt.replace(microsecond=0)
+        assume(overflow(time, delta1))
+        assume(delta2 <= delta1)
+        start_time = CityTime(time, 'UTC')
+        td1 = datetime.timedelta(seconds=delta1)
+        td2 = datetime.timedelta(seconds=delta2)
+        r1 = Range(start_time, td1)
+        end_time = r1.end_time()
+        r2 = Range(start_time, td2)
+        self.assertRaises(TypeError, r1.contains, str())
+        if delta1 == delta2:
+            self.assertTrue(r1.contains(r2))
+            self.assertTrue(r2.contains(r1))
+            return
+        self.assertTrue(r1.contains(r2))
+        self.assertFalse(r2.contains(r1))
+        r3 = Range(end_time, -td2)
+        self.assertTrue(r1.contains(r3))
+        self.assertFalse(r3.contains(r1))
+
+    @given(datetimes(timezones=[]), st.integers(min_value=0), st.integers(min_value=0))
+    def test_overlaps(self, dt, delta1, delta2):
+        time = dt.replace(microsecond=0)
+        assume(overflow(time, delta1))
+        start_time = CityTime(time, 'UTC')
+        td1 = datetime.timedelta(seconds=delta1)
+        td2 = datetime.timedelta(seconds=delta2)
+        r1 = Range(start_time, td1)
+        end_time = r1.end_time()
+        r2 = Range(start_time, td2)
+        self.assertTrue(r1.overlaps(r2))
+        self.assertTrue(r2.overlaps(r1))
+        r3 = Range(end_time, -td2)
+        self.assertTrue(r1.overlaps(r3))
+        self.assertTrue(r3.overlaps(r1))
+
+    @given(datetimes(timezones=[]), datetimes(timezones=[]), st.integers(min_value=0), st.integers(max_value=0))
+    def test_overlaps_false(self, dt1, dt2, delta1, delta2):
+        assume(dt1 > dt2)
+        assume(overflow(dt1, delta1))
+        assume(overflow(dt2, delta2))
+        r1 = Range(CityTime(dt1, 'UTC'), datetime.timedelta(seconds=delta1))
+        r2 = Range(CityTime(dt2, 'UTC'), datetime.timedelta(seconds=delta2))
+        self.assertRaises(TypeError, r1.overlaps, None)
+        self.assertFalse(r1.overlaps(r2))
+        self.assertFalse(r2.overlaps(r1))
+
+    @given(datetimes(timezones=[]), st.integers(min_value=0), st.integers(min_value=0))
+    def test_overlap(self, dt, delta1, delta2):
+        time = dt.replace(microsecond=0)
+        assume(overflow(time, delta1))
+        assume(delta2 < delta1)
+        start_time = CityTime(time, 'UTC')
+        td1 = datetime.timedelta(seconds=delta1)
+        td2 = datetime.timedelta(seconds=delta2)
+        r1 = Range(start_time, td1)
+        end_time = r1.end_time()
+        r2 = Range(start_time, td2)
+        self.assertEqual(r2.delta(), r1.overlap(r2))
+        self.assertEqual(r2.delta(), r1.overlap(r2))
+        r3 = Range(end_time, -td2)
+        self.assertEqual(r2.delta(), r1.overlap(r3))
+        self.assertEqual(r2.delta(), r3.overlap(r1))
+
+
+    @given(datetimes(timezones=[]), datetimes(timezones=[]), st.integers(min_value=0))
+    def test_sameness(self, dt1, dt2, delta):
+        assume(dt1 != dt2)
+        assume(overflow(dt1, delta))
+        assume(overflow(dt2, delta))
+        r1 = Range(CityTime(dt1, 'UTC'), datetime.timedelta(seconds=delta))
+        r2 = Range(CityTime(dt2, 'UTC'), datetime.timedelta(seconds=delta))
+        self.assertRaises(TypeError, r1.not_same, None)
+        self.assertFalse(r1.same_as(r2))
+        self.assertFalse(r2.same_as(r1))
+        self.assertTrue(r1.not_same(r2))
+        self.assertTrue(r2.not_same(r1))
+
+
+# noinspection PyTypeChecker
+class RangeExceptionHandling(unittest.TestCase):
+    def test_same_as(self):
+        r = Range(CityTime(datetime.datetime.now(), 'UTC'), datetime.timedelta())
+        self.assertFalse(r.same_as(None))
+
+def overflow(date_time, time_delta):
+    try:
+        date_time + datetime.timedelta(seconds=time_delta)
+    except OverflowError:
+        return False
+    else:
+        return True
 
 def timezones():
     return pytz.common_timezones
