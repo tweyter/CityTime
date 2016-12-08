@@ -627,13 +627,20 @@ class RangeTests(unittest.TestCase):
         r = Range()
         self.assertEqual(r._members, set())
 
-    def test_partial_init(self):
-        r = Range(self.start_time)
-        self.assertEqual(r._members, set())
-
     def test_full_init(self):
         r = Range(self.start_time, self.end_time)
         self.assertNotEqual(r._members, set())
+
+    def test_wrong_init(self):
+        ve = ValueError(
+                'Range object requires two parameters, either <CityTime, CityTime> or <CityTime, datetime.timedelta>'
+            )
+        with self.assertRaises(ValueError) as cm:
+            Range(2)
+        self.assertEqual(
+            cm.exception.args,
+            ve.args
+        )
 
     def test_create_range(self):
         r = Range()
@@ -729,6 +736,28 @@ class RangeTests(unittest.TestCase):
         not_contained = Range(self.end_time, datetime.timedelta(hours=-1))
         self.assertFalse(r.contains(not_contained))
 
+    def test_contains_errors(self):
+        r = Range()
+        with self.assertRaises(ValueError) as cm:
+            r.contains(self.start_time)
+        self.assertEqual(cm.exception.args, ('Range is not set.',))
+
+    def test_contains_errors2(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r.contains(Range())
+        self.assertEqual(cm.exception.args, ('Object to be compared is not set.',))
+
+    def test_contains_none(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertFalse(r.contains(None))
+
+    def test_contains_outside_of_range(self):
+        r = Range(self.start_time, self.end_time)
+        t = self.start_time.copy()
+        t.increment(days=-1)
+        self.assertFalse(r.contains(t))
+
     def test_overlaps(self):
         """
         Test for the overlaps method which determines if either the start time
@@ -770,6 +799,20 @@ class RangeTests(unittest.TestCase):
         non_overlap = Range(new_start_time, datetime.timedelta(hours=1))
         self.assertFalse(r.overlaps(non_overlap))
 
+    def test_overlaps_not_set(self):
+        r = Range()
+        cr = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r.overlaps(cr)
+        self.assertEqual(cm.exception.args, ('Range is not set.',))
+
+    def test_overlaps_param_not_set(self):
+        cr = Range()
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r.overlaps(cr)
+        self.assertEqual(cm.exception.args, ('Range object to be compared is not set.',))
+
     def test_overlap(self):
         """
         Test for the overlap method, which determines how much of one Range object
@@ -803,6 +846,20 @@ class RangeTests(unittest.TestCase):
         non_overlap = Range(new_start_time, datetime.timedelta(hours=1))
         self.assertEqual(r.overlap(non_overlap), datetime.timedelta())
 
+    def test_overlap_not_set(self):
+        r = Range()
+        cr = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r.overlap(cr)
+        self.assertEqual(cm.exception.args, ('Range is not set.',))
+
+    def test_overlap_param_not_set(self):
+        cr = Range()
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r.overlap(cr)
+        self.assertEqual(cm.exception.args, ('Range object to be compared is not set.',))
+
     def test_same_as(self):
         """
         Test of equality that returns True if both start times and end times are
@@ -826,34 +883,86 @@ class RangeTests(unittest.TestCase):
         equals = Range(new_start_time, self.end_time)
         self.assertTrue(r != equals)
 
-    def test_before_(self):
+    def test_before(self):
         r = Range(self.start_time, self.end_time)
         new_end_time = self.end_time.copy()
         new_end_time.increment(hours=-1)
         lesser = Range(new_end_time, new_end_time)
-        self.assertTrue(lesser < r)
+        self.assertTrue(lesser.before(r))
 
     def test_before_wrong_type(self):
         r = Range(self.start_time, self.end_time)
-        with self.assertRaises(TypeError):
-            r < 2
+        with self.assertRaises(TypeError) as cm:
+            r.before(2)
+        self.assertEqual(cm.exception.args, ("unorderable types: Range, <class 'int'>",))
+
+    def test_before_not_set(self):
+        r = Range()
+        cr = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r.before(cr)
+        self.assertEqual(cm.exception.args, ('Range is not set.',))
+
+    def test_before_param_not_set(self):
+        cr = Range()
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r.before(cr)
+        self.assertEqual(cm.exception.args, ('Range object to be compared is not set.',))
 
     def test_after(self):
         r = Range(self.start_time, self.end_time)
         new_end_time = self.end_time.copy()
         new_end_time.increment(hours=-1)
         lesser = Range(new_end_time, new_end_time)
-        self.assertTrue(r > lesser)
+        self.assertTrue(r.after(lesser))
 
     def test_after_wrong_type(self):
         r = Range(self.start_time, self.end_time)
-        with self.assertRaises(TypeError):
-            r > 2
+        with self.assertRaises(TypeError) as cm:
+            r.after(2)
+        self.assertEqual(cm.exception.args, ("unorderable types: Range, <class 'int'>",))
+
+    def test_after_not_set(self):
+        r = Range()
+        cr = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r.after(cr)
+        self.assertEqual(cm.exception.args, ('Range is not set.',))
+
+    def test_after_param_not_set(self):
+        cr = Range()
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r.after(cr)
+        self.assertEqual(cm.exception.args, ('Range object to be compared is not set.',))
 
     def test__eq__(self):
         r = Range(self.start_time, self.end_time)
         s = Range(self.start_time, self.end_time)
         self.assertTrue(r == s)
+
+    def test__eq__not_range(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertFalse(r == 3)
+
+    def test__eq__not_set(self):
+        r = Range()
+        with self.assertRaises(ValueError) as cm:
+            r == r
+        self.assertEqual(cm.exception.args, ('Range is not set.',))
+
+    def test__eq__other_not_set(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r == Range()
+        self.assertEqual(cm.exception.args, ('Range object to be compared is not set.',))
+
+    def test__eq__false(self):
+        r = Range(self.start_time, self.end_time)
+        cr = r.copy()
+        cr.extend_prior(datetime.timedelta(seconds=1))
+        self.assertFalse(r == cr)
 
     def test__ne__(self):
         r = Range(self.start_time, self.end_time)
@@ -861,11 +970,55 @@ class RangeTests(unittest.TestCase):
         s.extend(datetime.timedelta(seconds=1))
         self.assertTrue(r != s)
 
+    def test__ne__not_range(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(TypeError) as cm:
+            r != 3
+        self.assertEqual(cm.exception.args, ("unorderable types: Range, <class 'int'>",))
+
+    def test__ne__not_set(self):
+        r = Range()
+        with self.assertRaises(ValueError) as cm:
+            r != r
+        self.assertEqual(cm.exception.args, ('Range is not set.',))
+
+    def test__ne__other_not_set(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r != Range()
+        self.assertEqual(cm.exception.args, ('Range object to be compared is not set.',))
+
+    def test__ne__false(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertFalse(r != r)
+
     def test__lt__(self):
         r = Range(self.start_time, self.end_time)
         s = r.copy()
         s.extend(datetime.timedelta(seconds=1))
         self.assertTrue(r < s)
+
+    def test__lt__not_range(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(TypeError) as cm:
+            r < 3
+        self.assertEqual(cm.exception.args, ("unorderable types: Range, <class 'int'>",))
+
+    def test__lt__not_set(self):
+        r = Range()
+        with self.assertRaises(ValueError) as cm:
+            r < r
+        self.assertEqual(cm.exception.args, ('Range is not set.',))
+
+    def test__lt__other_not_set(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r < Range()
+        self.assertEqual(cm.exception.args, ('Range object to be compared is not set.',))
+
+    def test__lt__false(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertFalse(r < r)
 
     def test__le__(self):
         r = Range(self.start_time, self.end_time)
@@ -874,11 +1027,57 @@ class RangeTests(unittest.TestCase):
         s.extend(datetime.timedelta(seconds=1))
         self.assertTrue(r <= s)
 
+    def test__le__not_range(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(TypeError) as cm:
+            r <= 3
+        self.assertEqual(cm.exception.args, ("unorderable types: Range, <class 'int'>",))
+
+    def test__le__not_set(self):
+        r = Range()
+        with self.assertRaises(ValueError) as cm:
+            r <= r
+        self.assertEqual(cm.exception.args, ('Range is not set.',))
+
+    def test__le__other_not_set(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r <= Range()
+        self.assertEqual(cm.exception.args, ('Range object to be compared is not set.',))
+
+    def test__le__false(self):
+        r = Range(self.start_time, self.end_time)
+        cr = r.copy()
+        r.extend(datetime.timedelta(seconds=1))
+        self.assertFalse(r <= cr)
+
     def test__gt__(self):
         r = Range(self.start_time, self.end_time)
         s = r.copy()
         s.extend(datetime.timedelta(seconds=1))
         self.assertTrue(s > r)
+
+    def test__gt__not_range(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(TypeError) as cm:
+            r > 3
+        self.assertEqual(cm.exception.args, ("unorderable types: Range, <class 'int'>",))
+
+    def test__gt__not_set(self):
+        r = Range()
+        with self.assertRaises(ValueError) as cm:
+            r > r
+        self.assertEqual(cm.exception.args, ('Range is not set.',))
+
+    def test__gt__other_not_set(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r > Range()
+        self.assertEqual(cm.exception.args, ('Range object to be compared is not set.',))
+
+    def test__gt__false(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertFalse(r > r)
 
     def test__ge__(self):
         r = Range(self.start_time, self.end_time)
@@ -886,6 +1085,30 @@ class RangeTests(unittest.TestCase):
         self.assertTrue(s >= r)
         s.extend(datetime.timedelta(seconds=1))
         self.assertTrue(s >= r)
+
+    def test__ge__not_range(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(TypeError) as cm:
+            r >= 3
+        self.assertEqual(cm.exception.args, ("unorderable types: Range, <class 'int'>",))
+
+    def test__ge__not_set(self):
+        r = Range()
+        with self.assertRaises(ValueError) as cm:
+            r >= r
+        self.assertEqual(cm.exception.args, ('Range is not set.',))
+
+    def test__ge__other_not_set(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(ValueError) as cm:
+            r >= Range()
+        self.assertEqual(cm.exception.args, ('Range object to be compared is not set.',))
+
+    def test__ge__false(self):
+        r = Range(self.start_time, self.end_time)
+        cr = r.copy()
+        r.extend(datetime.timedelta(seconds=1))
+        self.assertFalse(cr >= r)
 
     def test__str__(self):
         r = Range(self.start_time, self.end_time)
@@ -935,6 +1158,11 @@ class RangeTests(unittest.TestCase):
         delta = datetime.timedelta(days=-1)
         self.assertRaises(ValueError, r.extend, delta)
 
+    def test_extend_not_set(self):
+        r = Range()
+        delta = datetime.timedelta(days=-1)
+        self.assertRaises(ValueError, r.extend, delta)
+
     def test_extend_prior(self):
         """
         Test for the extend_prior method, which extends (ie. sets to an earlier time)
@@ -959,6 +1187,11 @@ class RangeTests(unittest.TestCase):
         delta = datetime.timedelta(days=-1)
         self.assertRaises(ValueError, r.extend_prior, delta)
 
+    def test_extend_prior_not_set(self):
+        r = Range()
+        delta = datetime.timedelta(days=-1)
+        self.assertRaises(ValueError, r.extend_prior, delta)
+
     def test_replace_start_time(self):
         """
         Test for the replace_start_time method, which alters the current Range object
@@ -975,6 +1208,10 @@ class RangeTests(unittest.TestCase):
         r = Range(self.start_time, self.end_time)
         self.assertRaises(TypeError, r.replace_start_time, 2)
 
+    def test_replace_start_time_not_set(self):
+        r = Range()
+        self.assertRaises(ValueError, r.replace_start_time, self.start_time)
+
     def test_replace_end_time(self):
         """
         Test for the replace_end_time method, which alters the current Range object
@@ -990,6 +1227,10 @@ class RangeTests(unittest.TestCase):
     def test_replace_end_time_end_type(self):
         r = Range(self.start_time, self.end_time)
         self.assertRaises(TypeError, r.replace_end_time, 2)
+
+    def test_replace_end_time_not_set(self):
+        r = Range()
+        self.assertRaises(ValueError, r.replace_end_time, self.start_time)
 
     def test_intersection(self):
         """
@@ -1049,6 +1290,60 @@ class RangeTests(unittest.TestCase):
         lesser = Range(new_start_time, new_start_time)
         self.assertIsNone(r.intersection(lesser))
 
+    def test_intersection_not_set(self):
+        r = Range()
+        nr = Range(self.start_time, self.end_time)
+        self.assertRaises(ValueError, r.intersection, nr)
+
+    def test_intersection_other_not_set(self):
+        r = Range()
+        nr = Range(self.start_time, self.end_time)
+        self.assertRaises(ValueError, nr.intersection, r)
+
+    def test_intersection_contained_in_other(self):
+        """
+        Test for the intersection method, when the Range object is contained entirely
+        within the Range object given in the parameter.
+
+        @return:
+        """
+        r = Range(self.start_time, self.end_time)
+        new_start_time = self.start_time.copy()
+        new_start_time.increment(minutes=-1)
+        new_end_time = self.end_time.copy()
+        new_end_time.increment(minutes=1)
+        intersector = Range(new_start_time, new_end_time)
+        self.assertEqual(
+            r.intersection(intersector),
+            r
+        )
+
+    def test_intersection_overlaps_start_time(self):
+
+        r = Range(self.start_time, self.end_time)
+        new_start_time = self.start_time.copy()
+        new_start_time.increment(minutes=-1)
+        new_end_time = self.end_time.copy()
+        new_end_time.increment(minutes=-1)
+        intersector = Range(new_start_time, new_end_time)
+        self.assertEqual(
+            r.intersection(intersector),
+            Range(self.start_time, new_end_time)
+        )
+
+    def test_intersection_overlaps_end_time(self):
+
+        r = Range(self.start_time, self.end_time)
+        new_start_time = self.start_time.copy()
+        new_start_time.increment(minutes=1)
+        new_end_time = self.end_time.copy()
+        new_end_time.increment(minutes=1)
+        intersector = Range(new_start_time, new_end_time)
+        self.assertEqual(
+            r.intersection(intersector),
+            Range(new_start_time, self.end_time)
+        )
+
     def test_copy(self):
         """
         Test of the copy method, which returns a deep copy of the Range instance.
@@ -1068,6 +1363,10 @@ class RangeTests(unittest.TestCase):
 
         # Check to see that the end_times are unique objects
         self.assertNotEqual(id(r.end_time()), id(copied.end_time()))
+
+    def test_copy_not_set(self):
+        r = Range()
+        self.assertRaises(ValueError, r.copy)
 
     def test_shift(self):
         r = Range(self.start_time, self.end_time)
@@ -1204,6 +1503,7 @@ def overflow(date_time, time_delta):
         return False
     else:
         return True
+
 
 def timezones():
     return pytz.common_timezones

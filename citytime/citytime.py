@@ -674,13 +674,7 @@ class CityTime(object):
         # ... check to see if the local time is during the change to/from daylight savings time
         # I may be misunderstanding this. Since it is UTC that is being incremented, creating
         # these errors is impossible???
-        try:
-            self._tz.normalize(result.astimezone(self._tz))
-        except AmbiguousTimeError:
-            raise AmbiguousTimeError('pytz.exceptions.AmbiguousTimeError: %s' % result)
-        except NonExistentTimeError:
-            raise NonExistentTimeError('pytz.exceptions.NonExistentTimeError: %s' % result)
-        # ...
+        self._tz.normalize(result.astimezone(self._tz))
         self._datetime = result
 
     def local_strftime(self, form):
@@ -782,6 +776,12 @@ class Range(object):
             self._create_range_timedelta(time_a, time_b)
         elif all({time_a, time_b}):
             self._create_range(time_a, time_b)
+        elif time_a is None and time_b is None:
+            return
+        else:
+            raise ValueError(
+                'Range object requires two parameters, either <CityTime, CityTime> or <CityTime, datetime.timedelta>'
+            )
 
     def __bool__(self):
         return self._is_set
@@ -910,9 +910,6 @@ class Range(object):
 
         if (range_object.start_time() <= self.end_time()) and\
                 (range_object.end_time() >= self.start_time()):
-            return True
-        if (range_object.end_time() >= self.start_time()) and\
-                (range_object.start_time() <= self.end_time()):
             return True
         return False
 
@@ -1188,16 +1185,12 @@ class Range(object):
 
         if self.start_time() <= range_object.start_time() <= self.end_time():
             new_start_time = range_object.start_time()
-        elif range_object.start_time() <= self.start_time() <= range_object.end_time():
-            new_start_time = self.start_time()
         else:
-            return None
+            new_start_time = self.start_time()
         if self.start_time() <= range_object.end_time() <= self.end_time():
             new_end_time = range_object.end_time()
-        elif range_object.start_time() <= self.end_time() <= range_object.end_time():
-            new_end_time = self.end_time()
         else:
-            return None
+            new_end_time = self.end_time()
         return Range(new_start_time, new_end_time)
 
     def shift(self, delta):
