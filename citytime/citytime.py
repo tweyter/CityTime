@@ -901,6 +901,8 @@ class Range(object):
         @type range_object: Range
         @rtype: datetime.timedelta
         """
+        if range_object is None:
+            return False
         if not isinstance(range_object, Range):
             raise TypeError("Object to be compared must be of type 'Range'")
         if not self._is_set:

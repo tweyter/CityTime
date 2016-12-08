@@ -813,6 +813,10 @@ class RangeTests(unittest.TestCase):
             r.overlaps(cr)
         self.assertEqual(cm.exception.args, ('Range object to be compared is not set.',))
 
+    def test_overlaps_param_is_none(self):
+        r = Range(self.start_time, self.end_time)
+        self.assertFalse(r.overlaps(None))
+
     def test_overlap(self):
         """
         Test for the overlap method, which determines how much of one Range object
