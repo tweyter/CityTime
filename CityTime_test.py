@@ -1,6 +1,7 @@
 import unittest
 from calendar import day_name
 import datetime
+import time
 
 import pytz
 from pytz.exceptions import NonExistentTimeError, AmbiguousTimeError
@@ -9,6 +10,7 @@ from hypothesis import given, assume
 import hypothesis.strategies as st
 from hypothesis.searchstrategy.strategies import OneOfStrategy
 from hypothesis.extra.datetime import datetimes
+import pendulum
 
 from citytime.citytime import CityTime, Range
 
@@ -332,6 +334,13 @@ class PositiveTests(unittest.TestCase):
         self.assertIsInstance(test_time, CityTime)
         self.assertEqual(test_time.timezone(), test_zone)
         self.assertEqual(test_time.local().date(), test_date)
+
+    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    def test_epoch(self, dt, tz):
+        ct1 = CityTime(dt.replace(second=0, microsecond=0), tz)
+        epoch = datetime.datetime(1970, 1, 1, tzinfo=pytz.timezone('UTC'))
+        result = datetime.timedelta(seconds=ct1.epoch())
+        self.assertEqual(result + epoch, ct1.utc())
 
 
 class NegativeTests(unittest.TestCase):
@@ -1500,6 +1509,24 @@ class RangeHypothesisTests(unittest.TestCase):
         self.assertEqual(r2.delta(), r3.overlap(r1))
 
 
+class TimedTests(unittest.TestCase):
+    def test_citytime_vs_pendulum(self):
+        start = time.time()
+        for i in range(20000):
+            now = datetime.datetime.now()
+            ct = CityTime(now, 'America/New_York')
+        end = time.time()
+        ct_result = end - start
+
+        start = time.time()
+        for i in range(20000):
+            now = datetime.datetime.now()
+            pen = pendulum.create(*now.timetuple()[:5], microsecond=now.microsecond, tz='America/New_York')
+        end = time.time()
+        pen_result = end - start
+
+        print('{:%}'.format(ct_result/pen_result))
+
 def overflow(date_time, time_delta):
     try:
         date_time + datetime.timedelta(seconds=time_delta)
@@ -1511,7 +1538,6 @@ def overflow(date_time, time_delta):
 
 def timezones():
     return pytz.common_timezones
-
 
 if __name__ == '__main__':
     unittest.main()

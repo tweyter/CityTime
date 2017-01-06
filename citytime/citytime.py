@@ -734,6 +734,13 @@ class CityTime(object):
             current_time = datetime.datetime.now()
             return cls(current_time, zone)
 
+    def epoch(self):
+        if self._is_set is True:
+            epoch_base = datetime.datetime(1970, 1, 1, tzinfo=pytz.timezone('UTC'))
+            return int((self.utc() - epoch_base).total_seconds())
+        else:
+            raise ValueError('Date/Time zone has not been set.')
+
     def copy(self):
         """
         Returns a copy of this CityTime instance.
