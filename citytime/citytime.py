@@ -249,7 +249,7 @@ class CityTime(object):
         @rtype: str
         """
         if self._datetime != datetime.datetime.min:
-            return str(self.local())
+            return str(';'.join([self.utc().isoformat(), self.timezone()]))
         else:
             return "CityTime object not set yet."
 
@@ -751,6 +751,9 @@ class CityTime(object):
         new_object.set(self.local(), self.timezone())
         return new_object
 
+    def offset(self):
+        return self.local().strftime('%z')
+
 
 class Range(object):
     """
@@ -1227,3 +1230,13 @@ class Range(object):
             raise ValueError("Range is not set.")
 
         return Range(self.start_time().copy(), self.end_time().copy())
+
+    def timedelta_to_h_mm(self):
+        """
+
+        :rtype: str
+        """
+        delta = self.delta()
+        h, mm = divmod(int(delta.total_seconds()), 3600)
+        m, _ = divmod(mm, 60)
+        return '{0:01d}:{1:02d}'.format(h, m)

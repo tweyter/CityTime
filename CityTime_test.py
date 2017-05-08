@@ -10,7 +10,6 @@ from hypothesis import given, assume
 import hypothesis.strategies as st
 from hypothesis.searchstrategy.strategies import OneOfStrategy
 from hypothesis.extra.datetime import datetimes
-import pendulum
 
 from citytime.citytime import CityTime, Range
 
@@ -68,10 +67,19 @@ class PositiveTests(unittest.TestCase):
 
     @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
     def test__str__(self, dt, tz):
+        """
+        
+        @type dt: datetime.datetime
+        @type tz: str 
+        """
+        zone_check = pytz.timezone(tz)
+        time_check = zone_check.localize(dt, is_dst=None).astimezone(pytz.utc)
+        assert isinstance(time_check, datetime.datetime)
+
         ct1 = CityTime(dt, tz)
-        dt_utc = dt.replace(tzinfo=pytz.utc)
-        # slicing [:-6] removes the timezone offset
-        self.assertEqual(str(ct1)[:-6], str(dt_utc)[:-6])
+        result_time, zone = str(ct1).split(sep=';')
+        self.assertEqual(result_time, time_check.isoformat())
+        self.assertEqual(zone, tz)
 
     @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
     def test__repr__(self, dt, tz):
@@ -341,6 +349,13 @@ class PositiveTests(unittest.TestCase):
         epoch = datetime.datetime(1970, 1, 1, tzinfo=pytz.timezone('UTC'))
         result = datetime.timedelta(seconds=ct1.epoch())
         self.assertEqual(result + epoch, ct1.utc())
+
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
+    def test_offset(self, dt, zone):
+        dt = dt.replace(second=0, microsecond=0)
+        ct = CityTime(dt, zone)
+        offset = ct.offset()
+        assert offset == ct.local_strftime('%z')
 
 
 class NegativeTests(unittest.TestCase):
@@ -1476,6 +1491,17 @@ class RangeHypothesisTests(unittest.TestCase):
         r2 = Range(start_time, td2)
         self.assertTrue(r1.overlaps(r2))
         self.assertTrue(r2.overlaps(r1))
+
+    @given(datetimes(timezones=[]), st.integers(min_value=0), st.integers(min_value=0))
+    def test_overlaps(self, dt, delta1, delta2):
+        time = dt.replace(microsecond=0)
+        assume(overflow(time, delta1))
+        assume(overflow(time, delta1 - delta2))
+        start_time = CityTime(time, 'UTC')
+        td1 = datetime.timedelta(seconds=delta1)
+        td2 = datetime.timedelta(seconds=delta2)
+        r1 = Range(start_time, td1)
+        end_time = r1.end_time()
         r3 = Range(end_time, -td2)
         self.assertTrue(r1.overlaps(r3))
         self.assertTrue(r3.overlaps(r1))
@@ -1487,7 +1513,7 @@ class RangeHypothesisTests(unittest.TestCase):
         assume(overflow(dt2, delta2))
         r1 = Range(CityTime(dt1, 'UTC'), datetime.timedelta(seconds=delta1))
         r2 = Range(CityTime(dt2, 'UTC'), datetime.timedelta(seconds=delta2))
-        self.assertRaises(TypeError, r1.overlaps, None)
+        self.assertFalse(r1.overlaps(None))
         self.assertFalse(r1.overlaps(r2))
         self.assertFalse(r2.overlaps(r1))
 
@@ -1508,24 +1534,19 @@ class RangeHypothesisTests(unittest.TestCase):
         self.assertEqual(r2.delta(), r1.overlap(r3))
         self.assertEqual(r2.delta(), r3.overlap(r1))
 
+    @given(st.integers(min_value=0))
+    def test_timedelta_to_h_mm(self, d):
+        assume(overflow(
+            datetime.datetime(1970, 1, 1, 0, 0),
+            d * 60)
+        )
+        delta = datetime.timedelta(minutes=d)
+        start_time = CityTime(datetime.datetime(1970, 1, 1, 0, 0), 'UTC')
+        range = Range(start_time, delta)
+        h, mm = divmod(int(delta.total_seconds()), 3600)
+        m, _ = divmod(mm, 60)
+        assert range.timedelta_to_h_mm() == '{0:01d}:{1:02d}'.format(h, m)
 
-class TimedTests(unittest.TestCase):
-    def test_citytime_vs_pendulum(self):
-        start = time.time()
-        for i in range(20000):
-            now = datetime.datetime.now()
-            ct = CityTime(now, 'America/New_York')
-        end = time.time()
-        ct_result = end - start
-
-        start = time.time()
-        for i in range(20000):
-            now = datetime.datetime.now()
-            pen = pendulum.create(*now.timetuple()[:5], microsecond=now.microsecond, tz='America/New_York')
-        end = time.time()
-        pen_result = end - start
-
-        print('{:%}'.format(ct_result/pen_result))
 
 def overflow(date_time, time_delta):
     try:
