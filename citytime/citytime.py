@@ -249,7 +249,7 @@ class CityTime(object):
         @rtype: str
         """
         if self._datetime != datetime.datetime.min:
-            return str(';'.join([self.utc().isoformat(), self.timezone()]))
+            return str(';'.join([self._datetime.isoformat(), self.timezone()]))
         else:
             return "CityTime object not set yet."
 
@@ -260,7 +260,7 @@ class CityTime(object):
         @rtype: str
         """
         if self._datetime != datetime.datetime.min:
-            return str(self.local())
+            return str(';'.join([self._datetime.isoformat(), self.timezone()]))
         else:
             return "CityTime object not set yet."
 

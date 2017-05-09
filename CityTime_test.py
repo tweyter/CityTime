@@ -83,10 +83,14 @@ class PositiveTests(unittest.TestCase):
 
     @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
     def test__repr__(self, dt, tz):
+        zone_check = pytz.timezone(tz)
+        time_check = zone_check.localize(dt, is_dst=None).astimezone(pytz.utc)
+        assert isinstance(time_check, datetime.datetime)
+
         ct1 = CityTime(dt, tz)
-        dt_utc = dt.replace(tzinfo=pytz.utc)
-        # slicing [:-6] removes the timezone offset
-        self.assertEqual(ct1.__repr__()[:-6], str(dt_utc)[:-6])
+        result_time, zone = ct1.__repr__().split(sep=';')
+        self.assertEqual(result_time, time_check.isoformat())
+        self.assertEqual(zone, tz)
 
     @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
     def test__eq__(self, dt, tz):
