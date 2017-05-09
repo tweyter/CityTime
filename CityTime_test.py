@@ -1,7 +1,6 @@
 import unittest
 from calendar import day_name
 import datetime
-import time
 
 import pytz
 from pytz.exceptions import NonExistentTimeError, AmbiguousTimeError
@@ -62,6 +61,21 @@ class PositiveTests(unittest.TestCase):
         self.assertEqual(test_time._datetime, sample._datetime)
         self.assertEqual(test_time._t_zone, sample._t_zone)
 
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
+    def test_set_with_iso_format(self, dt, tz):
+        """
+        
+        @type dt: datetime.datetime 
+        @type tz: str 
+        @return: 
+        """
+        dt = dt.replace(second=0, microsecond=0)
+        sample = CityTime(dt, tz)
+        test_time = CityTime(sample.utc().isoformat(), tz)
+        self.assertEqual(test_time._tz, sample._tz)
+        self.assertEqual(test_time._datetime, sample._datetime)
+        self.assertEqual(test_time._t_zone, sample._t_zone)
+
     def test_unset__str__(self):
         self.assertEqual(self.ct1.__str__(), 'CityTime object not set yet.')
 
@@ -83,14 +97,20 @@ class PositiveTests(unittest.TestCase):
 
     @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
     def test__repr__(self, dt, tz):
-        zone_check = pytz.timezone(tz)
-        time_check = zone_check.localize(dt, is_dst=None).astimezone(pytz.utc)
-        assert isinstance(time_check, datetime.datetime)
-
         ct1 = CityTime(dt, tz)
-        result_time, zone = ct1.__repr__().split(sep=';')
-        self.assertEqual(result_time, time_check.isoformat())
-        self.assertEqual(zone, tz)
+        repr_check = 'CityTime("{}", "{}")'.format(
+            ct1._datetime.isoformat().split(sep='+')[0],
+            tz
+        )
+        self.assertEqual(repr(ct1), repr_check)
+
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
+    def test_eval__repr__(self, dt, tz):
+        ct1 = CityTime(dt, tz)
+        self.assertIsInstance(eval(repr(ct1)), CityTime)
+        e = eval(repr(ct1))
+        self.assertEqual(e, ct1)
+
 
     @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
     def test__eq__(self, dt, tz):

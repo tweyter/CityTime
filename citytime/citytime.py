@@ -232,15 +232,18 @@ class CityTime(object):
             self._tz = time.tzinfo()
             self._datetime = time.utc()
             self._t_zone = time.timezone()
+            self._is_set = True
         elif isinstance(time, datetime.datetime) and isinstance(tz, str):
             self.set(time, tz)
+        elif isinstance(time, str) and isinstance(tz, str):
+            self.set_iso_format(time, tz)
         elif time is None:
             self._datetime = datetime.datetime.min
             self._t_zone = str()
             self._tz = pytz.timezone('utc')
         else:
             raise TypeError("Argument 'time' must be of type 'CityTime' or 'datetime.datetime'")
-        self._is_set = self.is_set()
+
 
     def __str__(self):
         """
@@ -260,7 +263,12 @@ class CityTime(object):
         @rtype: str
         """
         if self._datetime != datetime.datetime.min:
-            return str(';'.join([self._datetime.isoformat(), self.timezone()]))
+            no_offset = self._datetime.isoformat().split(sep='+')[0]
+            _repr = 'CityTime("{}", "{}")'.format(
+                no_offset,
+                self._tz
+            )
+            return _repr
         else:
             return "CityTime object not set yet."
 
@@ -481,7 +489,58 @@ class CityTime(object):
 
         self._t_zone = time_zone
         self._tz = tz
-        self._is_set = self.is_set()
+        self._is_set = True
+
+    def set_iso_format(self, date_time, time_zone):
+        """
+        This method is called when setting the CityTime object using an ISO 8601 format
+        string.
+        
+        ***
+        The ISO formatted time MUST be UTC. It cannot accept an offset.
+        ***
+        
+        In order to avoid having to use another dependency, it is very simple in
+        its ability to parse the ISO format string. The string must be in the
+        following format:
+        YYYY-MM-DDTHH:MM:SS
+        It will strip out and disregard any microseconds
+
+        @type date_time: str
+        @type time_zone: str
+        """
+        try:
+            time_zone.upper()
+        except AttributeError:
+            raise UnknownTimeZoneError("Attribute 'time_zone' must be of type 'str'")
+
+        try:
+            tz = pytz.timezone(time_zone)
+        except pytz.exceptions.UnknownTimeZoneError:
+            raise UnknownTimeZoneError(time_zone)
+
+        try:
+            no_offset = date_time.split(sep='+')
+        except AttributeError():
+            raise AttributeError('ISO Format string must be a string in the following'
+                                 'format: YYYY-MM-DDTHH:MM:SS')
+
+        if len(no_offset) > 1 and no_offset[1] != '00:00':
+            raise ValueError('The ISO formatted time MUST be UTC. It cannot accept an offset.')
+
+        split_time = no_offset[0].split(sep='.')
+        form = '%Y-%m-%dT%H:%M:%S'
+        utc_time = datetime.datetime.strptime(split_time[0], form)
+
+        if len(split_time) == 2:
+            dt = utc_time.replace(microsecond=int(split_time[1]), tzinfo=pytz.utc)
+        else:
+            dt = utc_time.replace(tzinfo=pytz.utc)
+
+        self._datetime = dt.astimezone(pytz.utc)
+        self._t_zone = time_zone
+        self._tz = tz
+        self._is_set = True
 
     def is_set(self):
         """
