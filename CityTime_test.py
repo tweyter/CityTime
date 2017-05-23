@@ -1,16 +1,16 @@
+import datetime
 import unittest
 from calendar import day_name
-import datetime
 
+import hypothesis.strategies as st
 import pytz
+from hypothesis import given, assume
+from hypothesis.extra.datetime import datetimes
+from hypothesis.searchstrategy.strategies import OneOfStrategy
 from pytz.exceptions import NonExistentTimeError, AmbiguousTimeError
 from pytz.exceptions import UnknownTimeZoneError
-from hypothesis import given, assume
-import hypothesis.strategies as st
-from hypothesis.searchstrategy.strategies import OneOfStrategy
-from hypothesis.extra.datetime import datetimes
 
-from citytime.citytime import CityTime, Range
+from citytime import CityTime, Range
 
 
 class PositiveTests(unittest.TestCase):
@@ -110,7 +110,6 @@ class PositiveTests(unittest.TestCase):
         self.assertIsInstance(eval(repr(ct1)), CityTime)
         e = eval(repr(ct1))
         self.assertEqual(e, ct1)
-
 
     @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
     def test__eq__(self, dt, tz):
@@ -664,6 +663,32 @@ class NegativeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.ct1.increment(days=1)
 
+    def test_iso_format_bad_tz(self):
+        ct = CityTime()
+        with self.assertRaises(UnknownTimeZoneError):
+            ct.set_iso_format(self.early_time.isoformat(), True)
+
+    def test_iso_format_bad_tz2(self):
+        ct = CityTime()
+        with self.assertRaises(UnknownTimeZoneError):
+            ct.set_iso_format(self.early_time.isoformat(), "Mars")
+
+    def test_iso_format_bad_iso(self):
+        ct = CityTime()
+        with self.assertRaises(AttributeError):
+            ct.set_iso_format(True, "America/New_York")
+
+    def test_iso_format_bad_iso2(self):
+        ct = CityTime()
+        ct1 = CityTime(self.early_time, 'US/Eastern')
+        with self.assertRaises(ValueError):
+            ct.set_iso_format('2000-01-01T01:01:01+05:00'
+, "America/New_York")
+
+    def test_epoch_not_set(self):
+        with self.assertRaises(ValueError):
+            self.ct1.epoch()
+
 
 # noinspection PyTypeChecker
 class RangeTests(unittest.TestCase):
@@ -846,6 +871,12 @@ class RangeTests(unittest.TestCase):
         new_start_time.increment(days=-1)
         non_overlap = Range(new_start_time, datetime.timedelta(hours=1))
         self.assertFalse(r.overlaps(non_overlap))
+
+    def test_overlaps_wrong_type(self):
+        r = Range(self.start_time, self.end_time)
+        with self.assertRaises(TypeError) as cm:
+            r.overlaps(True)
+        self.assertEqual(cm.exception.args, ("Object to be compared must be of type 'Range'",))
 
     def test_overlaps_not_set(self):
         r = Range()
@@ -1507,6 +1538,7 @@ class RangeHypothesisTests(unittest.TestCase):
     def test_overlaps(self, dt, delta1, delta2):
         time = dt.replace(microsecond=0)
         assume(overflow(time, delta1))
+        assume(overflow(time, delta1 - delta2))
         start_time = CityTime(time, 'UTC')
         td1 = datetime.timedelta(seconds=delta1)
         td2 = datetime.timedelta(seconds=delta2)
@@ -1517,7 +1549,7 @@ class RangeHypothesisTests(unittest.TestCase):
         self.assertTrue(r2.overlaps(r1))
 
     @given(datetimes(timezones=[]), st.integers(min_value=0), st.integers(min_value=0))
-    def test_overlaps(self, dt, delta1, delta2):
+    def test_overlaps2(self, dt, delta1, delta2):
         time = dt.replace(microsecond=0)
         assume(overflow(time, delta1))
         assume(overflow(time, delta1 - delta2))
@@ -1581,8 +1613,8 @@ def overflow(date_time, time_delta):
         return True
 
 
-def timezones():
+def timezones():  # pragma: no cover
     return pytz.common_timezones
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     unittest.main()

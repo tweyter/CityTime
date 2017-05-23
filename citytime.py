@@ -223,7 +223,7 @@ class CityTime(object):
 
         Parameter tz will be ignored if parameter time is of type CityTime.
 
-        @type time: unknown or CityTime
+        @type time: str or datetime.datetime or CityTime
         @type tz: str
         @raise TypeError:
         """
@@ -243,7 +243,6 @@ class CityTime(object):
             self._tz = pytz.timezone('utc')
         else:
             raise TypeError("Argument 'time' must be of type 'CityTime' or 'datetime.datetime'")
-
 
     def __str__(self):
         """
@@ -521,7 +520,7 @@ class CityTime(object):
 
         try:
             no_offset = date_time.split(sep='+')
-        except AttributeError():
+        except (AttributeError, TypeError):
             raise AttributeError('ISO Format string must be a string in the following'
                                  'format: YYYY-MM-DDTHH:MM:SS')
 
@@ -730,9 +729,7 @@ class CityTime(object):
         if seconds:
             increment += datetime.timedelta(seconds=seconds)
         result = self._datetime + increment
-        # ... check to see if the local time is during the change to/from daylight savings time
-        # I may be misunderstanding this. Since it is UTC that is being incremented, creating
-        # these errors is impossible???
+        assert isinstance(result, datetime.datetime)
         self._tz.normalize(result.astimezone(self._tz))
         self._datetime = result
 
@@ -1183,7 +1180,7 @@ class Range(object):
         if not self._is_set:
             raise ValueError("Range is not set.")
         if not isinstance(added_delta, datetime.timedelta):
-            raise TypeError("{} is not of type datetime.timedelta".format(added_delta.__repr__()))
+            raise TypeError("{} is not of type datetime.timedelta".format(repr(added_delta)))
 
         if added_delta < datetime.timedelta():
             raise ValueError("Extend only takes a positive timedelta value.")
