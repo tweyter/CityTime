@@ -5,13 +5,13 @@ from os import path
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
-with open(path.join(here, 'README.md'), encoding='utf-8') as f:
+with open(path.join(here, 'README'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
     name="CityTime",
-    version="1.1.0",
-    description="Handling time comparisons",
+    version="1.1.1",
+    description="A tool for comparing time between different locations/timezones",
     long_description=long_description,
     author="Thorsten Weyter",
     author_email="tweyter@gmail.com",
