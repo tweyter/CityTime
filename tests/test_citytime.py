@@ -419,15 +419,7 @@ class NegativeTests(unittest.TestCase):
         self.ct2.set(self.current_time, 'US/Eastern')
         self.assertFalse(self.ct1 != self.ct2)
 
-    @given(OneOfStrategy(strategies=(
-        st.integers(),
-        st.booleans(),
-        st.none(),
-        st.floats(),
-        st.complex_numbers(),
-        st.text(),
-        st.binary()
-    )))
+    @given(st.floats())
     def test__ne__true(self, x):
         ct1 = CityTime(self.early_time, 'US/Eastern')
         self.assertNotEqual(ct1, x)
@@ -439,29 +431,13 @@ class NegativeTests(unittest.TestCase):
         ct1 = CityTime(dt1.replace(minute=1), tz)
         self.assertNotEqual(ct1, dt1)
 
-    @given(OneOfStrategy(strategies=(
-        st.integers(),
-        st.booleans(),
-        st.none(),
-        st.floats(),
-        st.complex_numbers(),
-        st.text(),
-        st.binary()
-    )))
+    @given(st.floats())
     def test__lt__(self, x):
         self.ct1.set(self.early_time, 'US/Eastern')
         with self.assertRaises(TypeError):
             self.ct1 < x
 
-    @given(OneOfStrategy(strategies=(
-        st.integers(),
-        st.booleans(),
-        st.none(),
-        st.floats(),
-        st.complex_numbers(),
-        st.text(),
-        st.binary()
-    )))
+    @given(st.floats())
     def test__le__(self, x):
         self.ct1.set(self.early_time, 'US/Eastern')
         with self.assertRaises(TypeError):
@@ -471,43 +447,19 @@ class NegativeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.ct1 <= self.ct2
 
-    @given(OneOfStrategy(strategies=(
-        st.integers(),
-        st.booleans(),
-        st.none(),
-        st.floats(),
-        st.complex_numbers(),
-        st.text(),
-        st.binary()
-    )))
+    @given(st.floats())
     def test__gt__(self, x):
         self.ct1.set(self.early_time, 'US/Eastern')
         with self.assertRaises(TypeError):
             self.ct1 > x
 
-    @given(OneOfStrategy(strategies=(
-        st.integers(),
-        st.booleans(),
-        st.none(),
-        st.floats(),
-        st.complex_numbers(),
-        st.text(),
-        st.binary()
-    )))
+    @given(st.floats())
     def test__ge__(self, x):
         self.ct1.set(self.early_time, 'US/Eastern')
         with self.assertRaises(TypeError):
             self.ct1 >= x
 
-    @given(OneOfStrategy(strategies=(
-        st.integers(),
-        st.booleans(),
-        st.none(),
-        st.floats(),
-        st.complex_numbers(),
-        st.text(),
-        st.binary()
-    )))
+    @given(st.floats())
     def test_set_dt(self, x):
         self.ct1.set(self.early_time, 'US/Eastern')
         with self.assertRaises((AttributeError, TypeError)):
@@ -521,14 +473,7 @@ class NegativeTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             self.ct1 - 2
 
-    @given(OneOfStrategy(strategies=(
-        st.integers(),
-        st.booleans(),
-        st.none(),
-        st.floats(),
-        st.text(),
-        st.binary()
-    )))
+    @given(st.floats())
     def test_set_tz(self, x):
         self.ct1.set(self.early_time, 'US/Eastern')
         with self.assertRaises((UnknownTimeZoneError, AttributeError)):
