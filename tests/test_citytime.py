@@ -12,6 +12,7 @@ from pytz.exceptions import UnknownTimeZoneError
 
 from citytime import CityTime, Range
 
+TIMEZONES = pytz.common_timezones
 
 class PositiveTests(unittest.TestCase):
     def setUp(self):
@@ -111,13 +112,13 @@ class PositiveTests(unittest.TestCase):
         e = eval(repr(ct1))
         self.assertEqual(e, ct1)
 
-    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
     def test__eq__(self, dt, tz):
         ct1 = CityTime(dt, tz)
         ct2 = CityTime(dt, tz)
         self.assertEqual(ct1, ct2)
 
-    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
     def test__eq__to_datetime(self, dt, tz):
         ct1 = self.ct1
         ct1.set(dt, tz)
@@ -127,7 +128,7 @@ class PositiveTests(unittest.TestCase):
     @given(
         datetimes(timezones=[]),
         datetimes(timezones=[]),
-        st.sampled_from(pytz.common_timezones_set)
+        st.sampled_from(list(pytz.common_timezones))
     )
     def test__ne__(self, dt1, dt2, tz):
         assume(dt1 != dt2)
@@ -135,7 +136,7 @@ class PositiveTests(unittest.TestCase):
         ct2 = CityTime(dt2, tz)
         self.assertNotEqual(ct1, ct2)
 
-    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
     def test__ne__non_datetime(self, dt, tz):
         assume(self.datetime_min < dt < self.datetime_max)
         ct1 = CityTime(dt, tz)
@@ -145,7 +146,7 @@ class PositiveTests(unittest.TestCase):
     @given(
         datetimes(timezones=[]),
         datetimes(timezones=[]),
-        st.sampled_from(pytz.common_timezones_set)
+        st.sampled_from(list(pytz.common_timezones))
     )
     def test__lt__(self, dt1, dt2, tz):
         assume(dt2 < self.datetime_max)
@@ -158,7 +159,7 @@ class PositiveTests(unittest.TestCase):
     @given(
         datetimes(timezones=[]),
         datetimes(timezones=[]),
-        st.sampled_from(pytz.common_timezones_set)
+        st.sampled_from(list(pytz.common_timezones))
     )
     def test__le__(self, dt1, dt2, tz):
         assume(dt2 < self.datetime_max)
@@ -171,7 +172,7 @@ class PositiveTests(unittest.TestCase):
     @given(
         datetimes(timezones=[]),
         datetimes(timezones=[]),
-        st.sampled_from(pytz.common_timezones_set)
+        st.sampled_from(list(pytz.common_timezones))
     )
     def test__gt__(self, dt1, dt2, tz):
         assume(dt1 < self.datetime_max)
@@ -184,7 +185,7 @@ class PositiveTests(unittest.TestCase):
     @given(
         datetimes(timezones=[]),
         datetimes(timezones=[]),
-        st.sampled_from(pytz.common_timezones_set)
+        st.sampled_from(list(pytz.common_timezones))
     )
     def test__ge__(self, dt1, dt2, tz):
         assume(dt1 < self.datetime_max)
@@ -194,7 +195,7 @@ class PositiveTests(unittest.TestCase):
         ct2 = CityTime(dt2, tz)
         self.assertGreaterEqual(ct1, ct2)
 
-    @given(datetimes(timezones=[]), st.integers(), st.sampled_from(pytz.common_timezones_set))
+    @given(datetimes(timezones=[]), st.integers(), st.sampled_from(list(pytz.common_timezones)))
     def test__add__(self, dt1, i, tz):
         assume(-999999999 < i < 999999999)
         td = datetime.timedelta(seconds=i)
@@ -211,7 +212,7 @@ class PositiveTests(unittest.TestCase):
         # check to see that ct1 is not changed, but that the method returned a new CityTime object
         self.assertFalse(ct1 is ct1 + td)
 
-    @given(datetimes(timezones=[]), st.integers(), st.sampled_from(pytz.common_timezones_set))
+    @given(datetimes(timezones=[]), st.integers(), st.sampled_from(list(pytz.common_timezones)))
     def test__sub__(self, dt1, i, tz):
         assume(abs(i) < 999999999)
         td = datetime.timedelta(seconds=i)
@@ -227,7 +228,7 @@ class PositiveTests(unittest.TestCase):
         # check to see that ct1 is not changed, but that the method returned a new CityTime object
         self.assertFalse(ct1 is ct1 - td)
 
-    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
     def test__hash__(self, dt, tz):
         ct1 = CityTime(dt, tz)
         self.assertEqual(ct1.__hash__(), ct1.utc().__hash__())
@@ -254,9 +255,9 @@ class PositiveTests(unittest.TestCase):
         ct1 = CityTime(dt, str(dt.tzinfo))
         self.assertEqual(ct1.timezone(), str(dt.tzinfo))
 
-    @given(datetimes(), st.sampled_from(pytz.common_timezones_set))
+    @given(datetimes(), st.sampled_from(list(pytz.common_timezones)))
     def test_astimezone(self, dt, tz):
-        assume(str(dt.tzinfo) in pytz.common_timezones_set)
+        assume(str(dt.tzinfo) in list(pytz.common_timezones))
         ct1 = CityTime(dt, str(dt.tzinfo))
         self.assertEqual(
             ct1.astimezone(tz),
@@ -270,12 +271,12 @@ class PositiveTests(unittest.TestCase):
         minutes = dt.hour * 60 + dt.minute
         self.assertEqual(ct1.local_minute(), minutes)
 
-    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
     def test_timezone(self, dt, tz):
         ct1 = CityTime(dt, tz)
         self.assertEqual(ct1.timezone(), tz)
 
-    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
     def test_tzinfo(self, dt, tz):
         ct1 = CityTime(dt, tz)
         self.assertEqual(ct1.tzinfo(), pytz.timezone(tz))
@@ -311,7 +312,7 @@ class PositiveTests(unittest.TestCase):
 
     @given(
         datetimes(timezones=[]),
-        st.sampled_from(pytz.common_timezones_set),
+        st.sampled_from(list(pytz.common_timezones)),
         st.integers(),
         st.integers(),
         st.integers(),
@@ -366,7 +367,7 @@ class PositiveTests(unittest.TestCase):
         self.assertEqual(test_time.timezone(), test_zone)
         self.assertEqual(test_time.local().date(), test_date)
 
-    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
     def test_epoch(self, dt, tz):
         ct1 = CityTime(dt.replace(second=0, microsecond=0), tz)
         epoch = datetime.datetime(1970, 1, 1, tzinfo=pytz.timezone('UTC'))
@@ -431,7 +432,7 @@ class NegativeTests(unittest.TestCase):
         ct1 = CityTime(self.early_time, 'US/Eastern')
         self.assertNotEqual(ct1, x)
 
-    @given(datetimes(timezones=[]), st.sampled_from(pytz.common_timezones_set))
+    @given(datetimes(timezones=[]), st.sampled_from(list(pytz.common_timezones)))
     def test__ne__datetime(self, dt, tz):
         assume(dt.minute != 1)
         dt1 = dt.replace(tzinfo=pytz.utc)
