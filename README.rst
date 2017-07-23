@@ -1,5 +1,12 @@
 CityTime
-========
+########
+
+.. image:: https://img.shields.io/codecov/c/github/tweyter/CityTime.svg
+    :target: https://codecov.io/gh/tweyter/CityTime
+
+.. image:: https://travis-ci.org/tweyter/CityTime.svg
+    :alt: CityTime Build status
+    :target: https://travis-ci.org/tweyter/CityTime
 
 Thanks:
 /u/phira
