@@ -24,178 +24,6 @@ CityTime handles cases like those mentioned above by converting the input local 
 the Olson Database time zone, rather than just using a UTC offset. This way, local differences in the start
 and end of Daylight Savings Time are accounted for.
 
-CityTime has the following methods:
-
-set(datetime, time_zone):
-or
-set(other_CityTime_object)
-    Allows setting the local time after a CityTime object has been created.
-    Input can be with either another CityTime object, or with a datetime.datetime object
-    plus a time zone string that refers to a time zone in the Olson database.
-    It is important to note that when initiating or setting a CityTime object,
-    the local time must include the date and the time zone. Otherwise, there would be no
-    way to account for Daylight Savings Time.
-
-local():
-    Outputs the time as a datetime.datetime object with the local time zone.
-
-utc():
-    Outputs the time as a datetime.datetime object converted to UTC.
-
-check_set():
-    Checks to see whether a CityTime object has been created with or without
-    the local time being set.
-
-    This is for instances where a someone might want to create a CityTime object, but
-    will actually set its time later in the program.
-
-astimezone(time_zone):
-    Check to see what the local time would be in a different time zone.
-    Let's say it is 8pm in Tokyo on November 1, and we would like to know what time
-    it is in New York. Calling .astimezone('America/New_York') from our CityTime object will
-    show that it is 7am in New York.
-
-local_minute():
-    Get just the local time, no date info, in the form of minutes.
-
-timezone():
-    Outputs the local time zone (Olson database, string format).
-
-tzinfo():
-    Return a datetime.tzinfo implementation for the given timezone.
-
-    Equivalent to pytz.timezone('Time_zone_string'). It can then be used with datetime,
-    with pytz.localize, etc.
-
-weekday()
-    Get the numerical day of the week (0 = Monday, 6 = Sunday) for the local time zone.
-
-day_name():
-    Get the calendar day of the week for the local time zone.
-
-day_abbr():
-    Get the abbreviated form of the calendar day of the week for the local time zone.
-
-time_string():
-    Get the local time in HHMM format.
-
-increment(days, hours, minutes, seconds):
-    Increment the time forward or back while adjusting for daylight savings time.
-
-    This increments the underlying UTC time, but it also checks to make sure that the
-    equivalent local time is a valid time.
-
-    For example, let's say it's 7am in New York on November 1. We want to know what the local
-    time will be 24 hours later. By incrementing the time by +24 hours, it will show that the
-    local time is now 6am. This is due to daylight savings time ending at 2am on November 2.
-
-local_strftime(format):
-    The equivalent of datetime.datetime.strftime.
-
-    Convert the local time to a string as specified by the format argument. The format argument
-    must be a string.
-
-utc_strftime(format):
-    The equivalent of datetime.datetime.strftime, but for UTC time.
-
-    Convert the time in UTC format to a string as specified by the format argument. The format argument
-    must be a string.
-
-Magic Methods:
-__str__():
-    Returns the local time in string format.
-
-__bool__():
-    Returns True if the CityTime object has been set with a local time, otherwise returns false.
-
-__hash__():
-    Returns the hash from datetime.datetime set to UTC.
-
-__eq__():
-    Returns true if this object's set time in UTC is equal to another CityTime object's UTC time.
-
-    For example, if this object is set to 4pm in Chicago, and you compare it to another CityTime
-    object that is set to 5pm in New York on the same date, it will show as equal.
-
-__ne__():
-    Returns true if this object's set time in UTC is not equal to another CityTime object's UTC time.
-
-    For example, if this object is set to 4pm in Chicago, and you compare it to another CityTime
-    object that is set to 4pm in New York on the same date, it will show as not equal, because when
-    it is 4pm in Chicago it is 5pm in New York.
-
-__lt__():
-    Returns true if this object's set time in UTC is earlier than another CityTime object's UTC time.
-
-    For example, if this object is set to 3pm in Chicago, and you compare it to another CityTime
-    object that is set to 5pm in New York on the same date, it will return True, however if the
-    same comparison is made when this object is set to 4pm in Chicago, it will return False because when
-    it is 4pm in Chicago it is 5pm in New York, and thus the times are equal.
-
-__le__():
-    Returns true if this object's set time in UTC is earlier than or equal to another CityTime
-    object's UTC time.
-
-    For example, if this object is set to 3pm in Chicago, and you compare it to another CityTime
-    object that is set to 5pm in New York on the same date, it will return True. If the
-    same comparison is made when this object is set to 4pm in Chicago, it will also return True
-    because when it is 4pm in Chicago it is 5pm in New York, and thus the times are equal.  When
-    this object is set to 5pm in Chicago, the comparison will then return False becaues 5pm in
-    Chicago is equivalent to 6pm in New York.
-
-__gt__():
-    Returns true if this object's set time in UTC is later than another CityTime object's UTC time.
-
-    For example, if this object is set to 5pm in Chicago, and you compare it to another CityTime
-    object that is set to 5pm in New York on the same date, it will return True, however if the
-    same comparison is made when this object is set to 4pm in Chicago, it will return False because when
-    it is 4pm in Chicago it is 5pm in New York, and thus the times are equal.
-
-__ge__():
-    Returns true if this object's set time in UTC is later than or equal to another CityTime
-    object's UTC time.
-
-    For example, if this object is set to 5pm in Chicago, and you compare it to another CityTime
-    object that is set to 5pm in New York on the same date, it will return True. If the
-    same comparison is made when this object is set to 4pm in Chicago, it will also return True
-    because when it is 4pm in Chicago it is 5pm in New York, and thus the times are equal.  When
-    this object is set to 3pm in Chicago, the comparison will then return False becaues 3pm in
-    Chicago is equivalent to 4pm in New York.
-
-__add__():
-    Returns a new CityTime object with the daylight savings time adjusted sum of this CityTime object
-    and a given timedelta.
-
-    This method mirrors the __add__ method of datetime.datetime, except that it adjusts for daylight
-    savings time. Instead of straight addition, however, this method increments the time forward or
-    backward depending on the given timedelta. Forward if the timedelta is positive, backward if the
-    timedelta is negative.  It will raise AmbiguousTimeError or NonExistentTimeError if the sum results
-    in an ambiguous time or a non existent time (caused by the transition to/from daylight
-    savings time.
-
-__sub__():
-    Returns a new CityTime object with the result of this CityTime object decremented by
-    the amount of time in the given timedelta.
-
-    This mirrors the __sub__ method of datetime.datetime, except that it adjusts for daylight
-    savings time. It will raise AmbiguousTimeError or NonExistentTimeError if the product results
-    in an ambiguous time or a non existent time (caused by the transition to/from daylight
-    savings time.
-
-There are also three exceptions inherited from pytz:
-AmbiguousTimeError:
-    Handles the end of Daylight Savings Time, when the local time between 1:00am and 2:00am occurs twice.
-    At 2:00am, people set their clocks back an hour to 1:00am, and the clock runs from 1:00am through
-    1:59am twice.
-
-NonExistentTimeError:
-    Handles the start of Daylight Savings Time, when the local time between 1:00am and 2:00am is skipped.
-    At 1:00am, people set their clocks forward an hour to 2:00am, thus the clock never runs through 1:01am
-    to 1:59am.
-
-UnknownTimeZoneError:
-    Raised if the user tries to pass an unknown time zone string (One that is not in the Olson database).
-
 """
 
 
@@ -214,19 +42,17 @@ class CityTime(object):
     It translates everything to UTC, and then attaches the time zone for translating back to local time.
     CityTime can also handle incrementing the time forward or back, in order to compare two separate UTC
     equivalent times with each other.
+    
+    CityTime objects can be instantiated using no parameters (creating a blank object that must be
+    set later), a datetime.datetime object + time zone string, or another CityTime object.
 
+    Parameter tz will be ignored if parameter time is of type CityTime.
+
+    :param time: str or datetime.datetime or CityTime
+    :type tz: str
+    :raises TypeError: If time argument is not CityTime, datetime.datetime or ISO8601
     """
     def __init__(self, time=None, tz=None):
-        """
-        CityTime objects can be instantiated using no parameters (creating a blank object that must be
-        set later), a datetime.datetime object + time zone string, or another CityTime object.
-
-        Parameter tz will be ignored if parameter time is of type CityTime.
-
-        @type time: str or datetime.datetime or CityTime
-        @type tz: str
-        @raise TypeError:
-        """
         self._is_set = False
         if time and isinstance(time, CityTime):
             self._tz = time.tzinfo()
@@ -248,7 +74,7 @@ class CityTime(object):
         """
         Returns the local time in string format.
 
-        @rtype: str
+        :rtype: str
         """
         if self._datetime != datetime.datetime.min:
             return str(';'.join([self._datetime.isoformat(), self.timezone()]))
@@ -259,7 +85,7 @@ class CityTime(object):
         """
         Returns the local time in string format.
 
-        @rtype: str
+        :rtype: str
         """
         if self._datetime != datetime.datetime.min:
             no_offset = self._datetime.isoformat().split(sep='+')[0]
@@ -275,7 +101,7 @@ class CityTime(object):
         """
         Returns True if the CityTime object has been set with a local time, otherwise returns false.
 
-        @rtype: bool
+        :rtype: bool
         """
         return self._is_set
 
@@ -283,7 +109,7 @@ class CityTime(object):
         """
         Returns the hash from datetime.datetime set to UTC.
 
-        @rtype: int
+        :rtype: int
         """
         return self._datetime.__hash__()
 
@@ -294,8 +120,8 @@ class CityTime(object):
         For example, if this object is set to 4pm in Chicago, and you compare it to another CityTime
         object that is set to 5pm in New York on the same date, it will show as equal.
 
-        @type other: CityTime
-        @rtype: bool
+        :type other: CityTime
+        :rtype: bool
         """
         other_utc = getattr(other, 'utc', None)
         if other_utc and self._datetime == other_utc():
@@ -311,8 +137,8 @@ class CityTime(object):
         object that is set to 4pm in New York on the same date, it will show as not equal, because when
         it is 4pm in Chicago it is 5pm in New York.
 
-        @type other: CityTime
-        @rtype: bool
+        :type other: CityTime
+        :rtype: bool
         """
         other_utc = getattr(other, 'utc', None)
         if other_utc and self.utc() != other_utc():
@@ -330,8 +156,8 @@ class CityTime(object):
         it is 4pm in Chicago it is 5pm in New York, and thus the times are equal.
 
         if self.utc < other.utc
-        @type other: CityTime
-        @rtype: bool
+        :type other: CityTime
+        :rtype: bool
         """
         other_utc = getattr(other, 'utc', None)
         if other_utc and self.utc() < other_utc():
@@ -351,8 +177,8 @@ class CityTime(object):
         this object is set to 5pm in Chicago, the comparison will then return False becaues 5pm in
         Chicago is equivalent to 6pm in New York.
 
-        @type other: CityTime
-        @rtype: bool
+        :type other: CityTime
+        :rtype: bool
         """
         if self._is_set is False:
             raise ValueError('Date/Time zone has not been set.')
@@ -371,8 +197,8 @@ class CityTime(object):
         same comparison is made when this object is set to 4pm in Chicago, it will return False because when
         it is 4pm in Chicago it is 5pm in New York, and thus the times are equal.
 
-        @type other: CityTime
-        @rtype: bool
+        :type other: CityTime
+        :rtype: bool
         """
         other_utc = getattr(other, 'utc', None)
         if other_utc and self.utc() > other_utc():
@@ -392,8 +218,8 @@ class CityTime(object):
         this object is set to 3pm in Chicago, the comparison will then return False becaues 3pm in
         Chicago is equivalent to 4pm in New York.
 
-        @type other: CityTime
-        @rtype: bool
+        :type other: CityTime
+        :rtype: bool
         """
         other_utc = getattr(other, 'utc', None)
         if other_utc and self.utc() >= other_utc():
@@ -413,8 +239,8 @@ class CityTime(object):
         in an ambiguous time or a non existent time (caused by the transition to/from daylight
         savings time.
 
-        @type other datetime.timedelta
-        @rtype: CityTime
+        :type other datetime.timedelta
+        :rtype: CityTime
         """
         new_object = CityTime()
         new_object.set(self.local(), self.timezone())
@@ -431,8 +257,8 @@ class CityTime(object):
         in an ambiguous time or a non existent time (caused by the transition to/from daylight
         savings time.
 
-        @type other CityTime, datetime
-        @rtype: CityTime
+        :type other CityTime, datetime
+        :rtype: CityTime
         """
         if isinstance(other, datetime.timedelta):
             new_object = CityTime()
@@ -458,8 +284,8 @@ class CityTime(object):
         the local time must include the date and the time zone. Otherwise, there would be no
         way to account for Daylight Savings Time.
 
-        @type date_time: datetime.datetime
-        @type time_zone: str
+        :type date_time: datetime.datetime
+        :type time_zone: str
         """
         try:
             time_zone.upper()
@@ -505,8 +331,8 @@ class CityTime(object):
         YYYY-MM-DDTHH:MM:SS
         It will strip out and disregard any microseconds
 
-        @type date_time: str
-        @type time_zone: str
+        :type date_time: str
+        :type time_zone: str
         """
         try:
             time_zone.upper()
@@ -566,7 +392,7 @@ class CityTime(object):
         """
         Outputs the time as a datetime.datetime object converted to UTC.
 
-        @rtype : datetime.datetime
+        :rtype : datetime.datetime
         """
         if self._is_set is True:
             return self._datetime
@@ -577,7 +403,7 @@ class CityTime(object):
         """
         Outputs the time as a datetime.datetime object with the local time zone.
 
-        @rtype : datetime.datetime
+        :rtype : datetime.datetime
         """
         if self._is_set is False:
             raise ValueError()
@@ -593,8 +419,8 @@ class CityTime(object):
         it is in New York. Calling .astimezone('America/New_York') from our CityTime object will
         show that it is 7am in New York.
 
-        @type time_zone: str
-        @rtype: datetime.datetime
+        :type time_zone: str
+        :rtype: datetime.datetime
         """
         if self._is_set is False:
             raise ValueError()
@@ -606,7 +432,7 @@ class CityTime(object):
         """
         Get just the local time, no date info, in the form of minutes.
 
-        @rtype : int
+        :rtype : int
         """
         if self._is_set is False:
             raise ValueError()
@@ -619,7 +445,7 @@ class CityTime(object):
         """
         Outputs the local time zone (Olson database, string format).
 
-        @rtype : str
+        :rtype : str
         """
         if self._is_set is False:
             raise ValueError()
@@ -632,7 +458,7 @@ class CityTime(object):
         Equivalent to pytz.timezone('Time_zone_string'). It can then be used with datetime,
         with pytz.localize, etc.
 
-        @rtype : timezone
+        :rtype : timezone
         """
         if self._is_set is False:
             raise ValueError()
@@ -642,7 +468,7 @@ class CityTime(object):
         """
         Get the numerical day of the week (0 = Monday, 6 = Sunday) for the local time zone.
 
-        @rtype: int
+        :rtype: int
         """
         if self._is_set is False:
             raise ValueError()
@@ -655,7 +481,7 @@ class CityTime(object):
         """
         Get the calendar day of the week for the local time zone.
 
-        @rtype: str
+        :rtype: str
         """
         if self._is_set is False:
             raise ValueError()
@@ -669,7 +495,7 @@ class CityTime(object):
         """
         Get the abbreviated form of the calendar day of the week for the local time zone.
 
-        @rtype: str
+        :rtype: str
         """
         weekdays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
 
@@ -685,7 +511,7 @@ class CityTime(object):
         """
         Get the local time in HHMM format.
 
-        @rtype: str
+        :rtype: str
         """
         if self._is_set is False:
             raise ValueError()
@@ -706,10 +532,10 @@ class CityTime(object):
         time will be 24 hours later. By incrementing the time by +24 hours, it will show that the
         local time is now 6am. This is due to daylight savings time ending at 2am on November 2.
 
-        @type days: int
-        @type hours: int
-        @type minutes: int
-        @type seconds: int
+        :type days: int
+        :type hours: int
+        :type minutes: int
+        :type seconds: int
         """
 
         if self._is_set is False:
@@ -740,8 +566,8 @@ class CityTime(object):
         Convert the local time to a string as specified by the format argument. The format argument
         must be a string.
 
-        @type form: str  # format argument
-        @rtype: str
+        :type form: str  # format argument
+        :rtype: str
         """
         local_datetime = self.local()
         result = local_datetime.strftime(form)
@@ -754,8 +580,8 @@ class CityTime(object):
         Convert the time in UTC format to a string as specified by the format argument. The format argument
         must be a string.
 
-        @type form: str  # format argument
-        @rtype: str
+        :type form: str  # format argument
+        :rtype: str
         """
         utc_datetime = self.utc()
         result = utc_datetime.strftime(form)
@@ -766,7 +592,7 @@ class CityTime(object):
         """
         Returns a CityTime object set to the current time in UTC.
 
-        @rtype: CityTime
+        :rtype: CityTime
         """
         current_time = datetime.datetime.today()
         return cls(current_time, 'UTC')
@@ -777,8 +603,8 @@ class CityTime(object):
         Returns a CityTime object set to the user's current local time, but taking a user input
         time zone.
 
-        @type zone: str
-        @rtype: CityTime
+        :type zone: str
+        :rtype: CityTime
         """
         if not zone:
             raise ValueError
@@ -791,6 +617,11 @@ class CityTime(object):
             return cls(current_time, zone)
 
     def epoch(self):
+        """
+        Returns the POSIX Epoch time.
+
+        :rtype: int 
+        """
         if self._is_set is True:
             epoch_base = datetime.datetime(1970, 1, 1, tzinfo=pytz.timezone('UTC'))
             return int((self.utc() - epoch_base).total_seconds())
@@ -801,13 +632,18 @@ class CityTime(object):
         """
         Returns a copy of this CityTime instance.
 
-        @rtype: CityTime
+        :rtype: CityTime
         """
         new_object = CityTime()
         new_object.set(self.local(), self.timezone())
         return new_object
 
     def offset(self):
+        """
+        Returns the local time zone's offset from UTC.
+        
+        :rtype: str 
+        """
         return self.local().strftime('%z')
 
 
@@ -822,20 +658,17 @@ class Range(object):
     so that if those objects are changed in the future it won't affect the Range
     object that was created. The same is true of Range objects made using a timedelta, the
     original CityTime object is copied.
+
+    A blank (unset) Range object can be created, but none of its methods can
+    be used until it is set using either _create_range or _create_range_timedelta.
+    
+    :param time_a: CityTime
+    :param time_b: CityTime or datetime.timedelta
+    :raises: ValueError if the first parameter is not of type CityTime and the second
+     parameter is not either CityTime or datetime.timedelta
     """
 
     def __init__(self, time_a=None, time_b=None):
-        """
-        Initialize the Range object.
-
-        A blank (unset) Range object can be created, but none of its methods can
-        be used until it is set using either _create_range or _create_range_timedelta.
-
-        @param time_a:
-        @param time_b:
-        @return:
-        """
-
         self._members = set()
         self._is_set = False
         if isinstance(time_b, datetime.timedelta):
@@ -856,9 +689,9 @@ class Range(object):
         """
         Check to see that the input values are valid, then set self._members
 
-        @param time_a:
-        @param time_b:
-        @return:
+        :param time_a:
+        :param time_b:
+        :return:
         """
         if not all({isinstance(time_a, CityTime), isinstance(time_b, CityTime)}):
             raise ValueError("Both start and end times must be CityTime objects.")
@@ -876,8 +709,8 @@ class Range(object):
         If the timedelta is a negative number, the given CityTime argument
         becomes the end time.
 
-        @type time_a: CityTime
-        @type delta: datetime.timedelta
+        :type time_a: CityTime
+        :type delta: datetime.timedelta
         """
         if not isinstance(time_a, CityTime):
             raise ValueError()
@@ -898,7 +731,7 @@ class Range(object):
         """
         Indicates whether the Range object has been properly set or not.
 
-        @return:
+        :return:
         """
         return self._is_set
 
@@ -906,7 +739,7 @@ class Range(object):
         """
         Return the earlier of the two Range times, no matter what order they are stored in.
 
-        @rtype: CityTime
+        :rtype: CityTime
         """
         return min(self._members)
 
@@ -914,7 +747,7 @@ class Range(object):
         """
         Return the later of the two Range times, no matter what order they are stored in.
 
-        @rtype: CityTime
+        :rtype: CityTime
         """
         return max(self._members)
 
@@ -922,7 +755,7 @@ class Range(object):
         """
         Returns the difference (timedelta) between the end time and the start time.
 
-        @rtype: datetime.timedelta
+        :rtype: datetime.timedelta
         """
         if not self._is_set:
             return datetime.timedelta()
@@ -934,8 +767,8 @@ class Range(object):
         one Range object fall entirely within the start and end times of another
         Range object.
 
-        @type citytime_or_range_object: object
-        @return:
+        :type citytime_or_range_object: object
+        :return:
         """
         def check_set(obj):
             if not self._is_set:
@@ -964,8 +797,8 @@ class Range(object):
         """
         Determines whether the given Range object overlaps with this Range object.
 
-        @type range_object: Range
-        @rtype: datetime.timedelta
+        :type range_object: Range
+        :rtype: datetime.timedelta
         """
         if range_object is None:
             return False
@@ -986,8 +819,8 @@ class Range(object):
         Determines how much of the given Range object overlaps with this Range
         object.
 
-        @type range_object: Range
-        @rtype: datetime.timedelta
+        :type range_object: Range
+        :rtype: datetime.timedelta
         """
         if not self._is_set:
             raise ValueError("Range is not set.")
@@ -1012,8 +845,8 @@ class Range(object):
 
         Equality is determined to be True if both start_times match and
         both end_times match.
-        @type other: Range
-        @rtype: bool
+        :type other: Range
+        :rtype: bool
         """
         if not isinstance(other, Range):
             return False
@@ -1031,8 +864,8 @@ class Range(object):
         Determines if one Range object is not equal to another Range object.
 
         Range objects are not equal if either the start_times or the end_times don't match.
-        @type other: Range
-        @rtype: bool
+        :type other: Range
+        :rtype: bool
         """
         if not isinstance(other, Range):
             raise TypeError("unorderable types: Range, {}".format(type(other)))
@@ -1051,8 +884,8 @@ class Range(object):
 
         In other words, the end time of the Range object to be checked must be
         an earlier time than the start_time of the checking object.
-        @type other: Range
-        @type: bool
+        :type other: Range
+        :type: bool
         """
         if not isinstance(other, Range):
             raise TypeError("unorderable types: Range, {}".format(type(other)))
@@ -1071,8 +904,8 @@ class Range(object):
 
         In other words, the start time of the Range object to be checked must be
         a later time than the end_time of the checking object.
-        @type other: Range
-        @type: bool
+        :type other: Range
+        :type: bool
         """
         if not isinstance(other, Range):
             raise TypeError("unorderable types: Range, {}".format(type(other)))
@@ -1089,8 +922,8 @@ class Range(object):
         """
         Determines if one Range object's duration (delta) is less than another Range object's duration.
 
-        @type other: Range
-        @type: bool
+        :type other: Range
+        :type: bool
         """
         if not isinstance(other, Range):
             raise TypeError("unorderable types: Range, {}".format(type(other)))
@@ -1107,8 +940,8 @@ class Range(object):
         """
         Determines if one Range object's duration (delta) is less than another Range object's duration.
 
-        @type other: Range
-        @type: bool
+        :type other: Range
+        :type: bool
         """
         if not isinstance(other, Range):
             raise TypeError("unorderable types: Range, {}".format(type(other)))
@@ -1125,8 +958,8 @@ class Range(object):
         """
         Determines if one Range object's duration (delta) is greater than another Range object's duration.
 
-        @type other: Range
-        @type: bool
+        :type other: Range
+        :type: bool
         """
         if not isinstance(other, Range):
             raise TypeError("unorderable types: Range, {}".format(type(other)))
@@ -1143,8 +976,8 @@ class Range(object):
         """
         Determines if one Range object's duration (delta) is greater than another Range object's duration.
 
-        @type other: Range
-        @type: bool
+        :type other: Range
+        :type: bool
         """
         if not isinstance(other, Range):
             raise TypeError("unorderable types: Range, {}".format(type(other)))
@@ -1174,8 +1007,8 @@ class Range(object):
         Extend the range by increasing end_time by the amount of time in the
         delta argument.
 
-        @type added_delta: datetime.timedelta
-        @return:
+        :type added_delta: datetime.timedelta
+        :return:
         """
         if not self._is_set:
             raise ValueError("Range is not set.")
@@ -1193,8 +1026,8 @@ class Range(object):
         Extend the range by decreasing start_time by the amount of time in the
         delta argument.
 
-        @param added_delta:
-        @return:
+        :param added_delta:
+        :return:
         """
         if not self._is_set:
             raise ValueError("Range is not set.")
@@ -1230,8 +1063,8 @@ class Range(object):
         Create a new range from the intersection of two ranges.
 
         The start time and end time are taken from where the two ranges overlap.
-        @param range_object:
-        @return:
+        :param range_object:
+        :return:
         """
         if not self._is_set:
             raise ValueError("Range is not set.")
@@ -1266,8 +1099,8 @@ class Range(object):
         Shift the time of the range.
 
         Works by incrementing start_time and end_time equally by the increment given in delta.
-        @type delta: datetime.timedelta
-        @return:
+        :type delta: datetime.timedelta
+        :return:
         """
         if not isinstance(delta, datetime.timedelta):
             raise TypeError('{} is wrong type. Must be datetime.timedelta'.format(delta))
@@ -1280,7 +1113,7 @@ class Range(object):
         """
         Create a copy of this Range instance.
 
-        @rtype: Range
+        :rtype: Range
         """
         if not self._is_set:
             raise ValueError("Range is not set.")
