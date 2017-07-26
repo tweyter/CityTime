@@ -367,6 +367,30 @@ class CityTime(object):
         self._tz = tz
         self._is_set = True
 
+    def change_tz(self, time_zone):
+        """
+        Change the time zone of a CityTime object that has already been set.
+        
+        If you have a CityTime object set for New York City, for example, and you want
+        to change it so that you have the local time for Los Angeles instead, this method
+        will reset the time zone to Los Angeles' time zone and can then output the local
+        Los Angeles time and will no longer give New York City's local time
+
+        :type time_zone: str
+        """
+        try:
+            time_zone.upper()
+        except AttributeError:
+            raise UnknownTimeZoneError("Attribute 'time_zone' must be of type 'str'")
+
+        try:
+            tz = pytz.timezone(time_zone)
+        except pytz.exceptions.UnknownTimeZoneError:
+            raise UnknownTimeZoneError(time_zone)
+
+        self._tz = tz
+        self._t_zone = time_zone
+
     def is_set(self):
         """
         Checks to see whether a CityTime object has been created with or without

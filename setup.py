@@ -1,4 +1,3 @@
-import unittest
 from os import path
 
 from setuptools import setup
@@ -6,14 +5,8 @@ from setuptools import setup
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
-with open(path.join(here, 'README'), encoding='utf-8') as f:
+with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
-
-
-def my_test_suite():
-    test_loader = unittest.TestLoader()
-    test_suite = test_loader.discover('tests', pattern='test_*.py')
-    return test_suite
 
 
 packages = ['citytime']
@@ -29,11 +22,10 @@ setup(
     license="MIT",
     url="https://github.com/tweyter/CityTime",
     packages=packages,
-    test_suite='setup.my_test_suite',
     package_dir={'citytime': 'citytime'},
     keywords="time datetime olson timezone",
     install_requires=["pytz"],
-    tests_require=['hypothesis'],
+    tests_require=['hypothesis', 'pytest'],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Topic :: Utilities"

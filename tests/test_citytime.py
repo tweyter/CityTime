@@ -77,6 +77,19 @@ class PositiveTests(unittest.TestCase):
         self.assertEqual(test_time._datetime, sample._datetime)
         self.assertEqual(test_time._t_zone, sample._t_zone)
 
+    @given(
+        datetimes(timezones=[]),
+        st.sampled_from(list(pytz.common_timezones)),
+        st.sampled_from(list(pytz.common_timezones))
+    )
+    def test_reset_tz(self, dt, tz1, tz2):
+        sample = CityTime(dt, tz1)
+        test_time = CityTime(sample._datetime, tz2)
+        test_time.change_tz(tz1)
+        self.assertEqual(test_time._tz, sample._tz)
+        self.assertEqual(test_time._datetime, sample._datetime)
+        self.assertEqual(test_time._t_zone, sample._t_zone)
+
     def test_unset__str__(self):
         self.assertEqual(self.ct1.__str__(), 'CityTime object not set yet.')
 
@@ -482,6 +495,16 @@ class NegativeTests(unittest.TestCase):
     def test_set_unknown_tz(self):
         with self.assertRaises(pytz.exceptions.UnknownTimeZoneError):
             self.ct1.set(self.current_time, 'US/Moscow')
+
+    def test_reset_tz_not_str(self):
+        self.ct1.set(self.early_time, 'America/New_York')
+        with self.assertRaises(pytz.exceptions.UnknownTimeZoneError):
+            self.ct1.change_tz('23')
+
+    def test_reset_tz_unknown_tz(self):
+        self.ct1.set(self.early_time, 'America/New_York')
+        with self.assertRaises(pytz.exceptions.UnknownTimeZoneError):
+            self.ct1.change_tz('US/Moscow')
 
     @given(st.integers())
     def test_set_date_instead_of_datetime(self, y):
