@@ -556,10 +556,10 @@ class CityTime(object):
         time will be 24 hours later. By incrementing the time by +24 hours, it will show that the
         local time is now 6am. This is due to daylight savings time ending at 2am on November 2.
 
-        :type days: int
-        :type hours: int
-        :type minutes: int
-        :type seconds: int
+        :type days: int | float
+        :type hours: int | float
+        :type minutes: int | float
+        :type seconds: int | float
         """
 
         if self._is_set is False:
