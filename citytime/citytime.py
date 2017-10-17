@@ -659,7 +659,10 @@ class CityTime(object):
         :rtype: CityTime
         """
         new_object = CityTime()
-        new_object.set(self.local(), self.timezone())
+        new_object._datetime = self._datetime
+        new_object._t_zone = self._t_zone
+        new_object._tz = self._tz
+        new_object._is_set = True
         return new_object
 
     def offset(self):
