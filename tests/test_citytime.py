@@ -14,6 +14,7 @@ from citytime import CityTime, Range
 
 TIMEZONES = pytz.common_timezones
 
+
 class PositiveTests(unittest.TestCase):
     def setUp(self):
         self.datetime_min = datetime.datetime.min.replace(month=2)
@@ -267,6 +268,12 @@ class PositiveTests(unittest.TestCase):
         assume(str(dt.tzinfo) in self.sample_timezones)
         ct1 = CityTime(dt, str(dt.tzinfo))
         self.assertEqual(ct1.timezone(), str(dt.tzinfo))
+
+    @given(datetimes(), st.sampled_from(list(pytz.common_timezones)))
+    def test_copy(self, dt, tz):
+        assume(str(dt.tzinfo) in list(pytz.common_timezones))
+        ct1 = CityTime(dt, str(dt.tzinfo))
+        self.assertEqual(ct1.copy(), ct1)
 
     @given(datetimes(), st.sampled_from(list(pytz.common_timezones)))
     def test_astimezone(self, dt, tz):
