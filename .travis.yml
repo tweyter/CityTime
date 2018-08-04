@@ -10,7 +10,7 @@ install:
   - pip install -r requirements-test.txt
 
 script:
-  - pytest --cov=./src/citytime
+  - pytest --cov=./
   - mypy ./src/citytime
 
 after_success:
