@@ -903,9 +903,13 @@ class Range(object):
 
         excluded = datetime.timedelta()
         if range_object.start_time() < self.start_time():
-            excluded += self.start_time() - range_object.start_time()
+            difference = self.start_time() - range_object.start_time()
+            if isinstance(difference, datetime.timedelta):
+                excluded += difference
         if range_object.end_time() > self.end_time():
-            excluded += range_object.end_time() - self.end_time()
+            difference = range_object.end_time() - self.end_time()
+            if isinstance(difference, datetime.timedelta):
+                excluded += difference
         return range_object.delta() - excluded
 
     def __eq__(self, other: Any) -> bool:
@@ -947,43 +951,43 @@ class Range(object):
             return True
         return False
 
-    def before(self, other: Any) -> bool:
+    def before(self, other_range_obj: 'Range') -> bool:
         """
         Determines if one Range object is entirely less than another Range object.
 
         In other words, the end time of the Range object to be checked must be
         an earlier time than the start_time of the checking object.
-        :type other: Range
+        :type other_range_obj: Range
         :type: bool
         """
-        if not isinstance(other, Range):
+        if not isinstance(other_range_obj, Range):
             return NotImplemented
         if not self._is_set:
             raise ValueError("Range is not set.")
-        if not other.check_set():
+        if not other_range_obj.check_set():
             raise ValueError("Range object to be compared is not set.")
 
-        if self.end_time() < other.start_time():
+        if self.end_time() < other_range_obj.start_time():
             return True
         return False
 
-    def after(self, other: Any) -> bool:
+    def after(self, other_range_obj: 'Range') -> bool:
         """
         Determines if one Range object is entirely greater than another Range object.
 
         In other words, the start time of the Range object to be checked must be
         a later time than the end_time of the checking object.
-        :type other: Range
+        :type other_range_obj: Range
         :type: bool
         """
-        if not isinstance(other, Range):
+        if not isinstance(other_range_obj, Range):
             return NotImplemented
         if not self._is_set:
             raise ValueError("Range is not set.")
-        if not other.check_set():
+        if not other_range_obj.check_set():
             raise ValueError("Range object to be compared is not set.")
 
-        if self.start_time() > other.end_time():
+        if self.start_time() > other_range_obj.end_time():
             return True
         return False
 
