@@ -29,12 +29,13 @@ and end of Daylight Savings Time are accounted for.
 
 from calendar import day_name
 import datetime
-from typing import Optional, Union, Any, List, Set, Dict, Tuple
+from typing import Optional, Union, Any, Set
 
 import pytz
 from pytz.exceptions import AmbiguousTimeError
 from pytz.exceptions import NonExistentTimeError
 from pytz.exceptions import UnknownTimeZoneError
+# noinspection PyProtectedMember
 from pytz.tzinfo import BaseTzInfo, StaticTzInfo, DstTzInfo
 
 
@@ -52,7 +53,6 @@ class CityTime(object):
     Parameter tz will be ignored if parameter time is of type CityTime.
 
     :param time: str or datetime.datetime or CityTime
-    :type tz: str
     :raises TypeError: If time argument is not CityTime, datetime.datetime or ISO8601
     """
     def __init__(
@@ -161,7 +161,6 @@ class CityTime(object):
         it is 4pm in Chicago it is 5pm in New York, and thus the times are equal.
 
         if self.utc < other.utc
-        :type other: CityTime
         :rtype: bool
         """
         if not isinstance(other, CityTime):
@@ -184,8 +183,6 @@ class CityTime(object):
         this object is set to 5pm in Chicago, the comparison will then return False becaues 5pm in
         Chicago is equivalent to 6pm in New York.
 
-        :type other: CityTime
-        :rtype: bool
         """
         if not isinstance(other, CityTime):
             return NotImplemented
@@ -206,8 +203,6 @@ class CityTime(object):
         same comparison is made when this object is set to 4pm in Chicago, it will return False because when
         it is 4pm in Chicago it is 5pm in New York, and thus the times are equal.
 
-        :type other: CityTime
-        :rtype: bool
         """
         if not isinstance(other, CityTime):
             return NotImplemented
@@ -229,8 +224,6 @@ class CityTime(object):
         this object is set to 3pm in Chicago, the comparison will then return False becaues 3pm in
         Chicago is equivalent to 4pm in New York.
 
-        :type other: CityTime
-        :rtype: bool
         """
         if not isinstance(other, CityTime):
             return NotImplemented
@@ -252,8 +245,6 @@ class CityTime(object):
         in an ambiguous time or a non existent time (caused by the transition to/from daylight
         savings time.
 
-        :type other datetime.timedelta
-        :rtype: CityTime
         """
         if not isinstance(other, datetime.timedelta):
             return NotImplemented
@@ -272,8 +263,6 @@ class CityTime(object):
         in an ambiguous time or a non existent time (caused by the transition to/from daylight
         savings time.
 
-        :type other CityTime, datetime
-        :rtype: CityTime
         """
         if isinstance(other, datetime.timedelta):
             new_object = CityTime()
@@ -299,8 +288,6 @@ class CityTime(object):
         the local time must include the date and the time zone. Otherwise, there would be no
         way to account for Daylight Savings Time.
 
-        :type date_time: datetime.datetime
-        :type time_zone: str
         """
         try:
             time_zone.upper()
@@ -346,8 +333,6 @@ class CityTime(object):
         YYYY-MM-DDTHH:MM:SS
         It will strip out and disregard any microseconds
 
-        :type date_time: str
-        :type time_zone: str
         """
         try:
             time_zone.upper()
@@ -391,7 +376,6 @@ class CityTime(object):
         will reset the time zone to Los Angeles' time zone and can then output the local
         Los Angeles time and will no longer give New York City's local time
 
-        :type time_zone: str
         """
         try:
             time_zone.upper()
@@ -458,8 +442,6 @@ class CityTime(object):
         it is in New York. Calling .astimezone('America/New_York') from our CityTime object will
         show that it is 7am in New York.
 
-        :type time_zone: str
-        :rtype: datetime.datetime
         """
         if self._is_set is False:
             raise ValueError()
@@ -576,10 +558,6 @@ class CityTime(object):
         time will be 24 hours later. By incrementing the time by +24 hours, it will show that the
         local time is now 6am. This is due to daylight savings time ending at 2am on November 2.
 
-        :type days: int | float
-        :type hours: int | float
-        :type minutes: int | float
-        :type seconds: int | float
         """
 
         if self._is_set is False:
@@ -610,8 +588,6 @@ class CityTime(object):
         Convert the local time to a string as specified by the format argument. The format argument
         must be a string.
 
-        :type form: str  # format argument
-        :rtype: str
         """
         local_datetime = self.local()
         result = local_datetime.strftime(form)
@@ -624,8 +600,6 @@ class CityTime(object):
         Convert the time in UTC format to a string as specified by the format argument. The format argument
         must be a string.
 
-        :type form: str  # format argument
-        :rtype: str
         """
         utc_datetime = self.utc()
         result = utc_datetime.strftime(form)
@@ -647,8 +621,6 @@ class CityTime(object):
         Returns a CityTime object set to the user's current local time, but taking a user input
         time zone.
 
-        :type zone: str
-        :rtype: CityTime
         """
         if not zone:
             raise ValueError
@@ -772,8 +744,6 @@ class Range(object):
         If the timedelta is a negative number, the given CityTime argument
         becomes the end time.
 
-        :type time_a: CityTime
-        :type delta: datetime.timedelta
         """
         if not isinstance(time_a, CityTime):
             raise ValueError()
@@ -836,8 +806,6 @@ class Range(object):
         one Range object fall entirely within the start and end times of another
         Range object.
 
-        :type citytime_or_range_object: object
-        :return:
         """
         def check_set(obj: Any) -> None:
             if not self._is_set:
@@ -866,8 +834,6 @@ class Range(object):
         """
         Determines whether the given Range object overlaps with this Range object.
 
-        :type range_object: Range
-        :rtype: datetime.timedelta
         """
         if range_object is None:
             return False
@@ -888,8 +854,6 @@ class Range(object):
         Determines how much of the given Range object overlaps with this Range
         object.
 
-        :type range_object: Range
-        :rtype: datetime.timedelta
         """
         if not self._is_set:
             raise ValueError("Range is not set.")
@@ -918,8 +882,6 @@ class Range(object):
 
         Equality is determined to be True if both start_times match and
         both end_times match.
-        :type other: Range
-        :rtype: bool
         """
         if not isinstance(other, Range):
             return NotImplemented
@@ -937,8 +899,6 @@ class Range(object):
         Determines if one Range object is not equal to another Range object.
 
         Range objects are not equal if either the start_times or the end_times don't match.
-        :type other: Range
-        :rtype: bool
         """
         if not isinstance(other, Range):
             raise NotImplemented
@@ -957,8 +917,6 @@ class Range(object):
 
         In other words, the end time of the Range object to be checked must be
         an earlier time than the start_time of the checking object.
-        :type other_range_obj: Range
-        :type: bool
         """
         if not isinstance(other_range_obj, Range):
             return NotImplemented
@@ -977,8 +935,6 @@ class Range(object):
 
         In other words, the start time of the Range object to be checked must be
         a later time than the end_time of the checking object.
-        :type other_range_obj: Range
-        :type: bool
         """
         if not isinstance(other_range_obj, Range):
             return NotImplemented
@@ -995,8 +951,6 @@ class Range(object):
         """
         Determines if one Range object's duration (delta) is less than another Range object's duration.
 
-        :type other: Range
-        :type: bool
         """
         if not isinstance(other, Range):
             raise TypeError("unorderable types: Range, {}".format(type(other)))
@@ -1013,8 +967,6 @@ class Range(object):
         """
         Determines if one Range object's duration (delta) is less than another Range object's duration.
 
-        :type other: Range
-        :type: bool
         """
         if not isinstance(other, Range):
             raise TypeError("unorderable types: Range, {}".format(type(other)))
@@ -1031,8 +983,6 @@ class Range(object):
         """
         Determines if one Range object's duration (delta) is greater than another Range object's duration.
 
-        :type other: Range
-        :type: bool
         """
         if not isinstance(other, Range):
             raise TypeError("unorderable types: Range, {}".format(type(other)))
@@ -1049,8 +999,6 @@ class Range(object):
         """
         Determines if one Range object's duration (delta) is greater than another Range object's duration.
 
-        :type other: Range
-        :type: bool
         """
         if not isinstance(other, Range):
             raise TypeError("unorderable types: Range, {}".format(type(other)))
@@ -1080,8 +1028,6 @@ class Range(object):
         Extend the range by increasing end_time by the amount of time in the
         delta argument.
 
-        :type added_delta: datetime.timedelta
-        :return:
         """
         if not self._is_set:
             raise ValueError("Range is not set.")
@@ -1099,8 +1045,6 @@ class Range(object):
         Extend the range by decreasing start_time by the amount of time in the
         delta argument.
 
-        :param added_delta:
-        :return:
         """
         if not self._is_set:
             raise ValueError("Range is not set.")
@@ -1136,8 +1080,6 @@ class Range(object):
         Create a new range from the intersection of two ranges.
 
         The start time and end time are taken from where the two ranges overlap.
-        :param range_object:
-        :return:
         """
         if not self._is_set:
             raise ValueError("Range is not set.")
@@ -1172,8 +1114,6 @@ class Range(object):
         Shift the time of the range.
 
         Works by incrementing start_time and end_time equally by the increment given in delta.
-        :type delta: datetime.timedelta
-        :return:
         """
         if not isinstance(delta, datetime.timedelta):
             raise TypeError('{} is wrong type. Must be datetime.timedelta'.format(delta))
