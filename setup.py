@@ -24,7 +24,7 @@ INSTALL_REQUIRES = ['pytz']
 
 SETUP_REQUIRES = ['pytest-runner']
 
-TESTS_REQUIRE = ['pytest', 'hypothesis']
+TESTS_REQUIRE = ['pytest', 'pytest-cov', 'mypy', 'hypothesis']
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 

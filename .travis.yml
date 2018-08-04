@@ -7,9 +7,11 @@ python:
 
 install:
   - pip install -r requirements.txt
+  - pip install -r requirements-test.txt
 
 script:
-  - pytest --cov=./
+  - pytest --cov=./src/citytime
+  - mypy ./src/citytime
 
 after_success:
   - codecov

@@ -62,9 +62,7 @@ class CityTime(object):
     ) -> None:
         self._is_set = False
         if time and isinstance(time, CityTime):
-            self._tz: Union[
-                BaseTzInfo, StaticTzInfo, DstTzInfo
-            ] = time.tzinfo()
+            self._tz: Any = time.tzinfo()
             self._datetime: datetime.datetime = time.utc()
             self._t_zone: str = time.timezone()
             self._is_set: bool = True
@@ -472,7 +470,7 @@ class CityTime(object):
             raise ValueError()
         return self._t_zone
 
-    def tzinfo(self) -> Union[BaseTzInfo, StaticTzInfo, DstTzInfo]:
+    def tzinfo(self) -> Any:
         """
         Return a datetime.tzinfo implementation for the given timezone.
 

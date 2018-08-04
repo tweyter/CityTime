@@ -1,0 +1,5 @@
+hypothesis==3.66.24
+mypy==0.620
+pytest==3.7.1
+pytest-cov==2.5.1
+pytest-runner==4.2
