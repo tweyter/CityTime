@@ -35,8 +35,6 @@ import pytz
 from pytz.exceptions import AmbiguousTimeError
 from pytz.exceptions import NonExistentTimeError
 from pytz.exceptions import UnknownTimeZoneError
-# noinspection PyProtectedMember
-from pytz.tzinfo import BaseTzInfo, StaticTzInfo, DstTzInfo
 
 
 class CityTime(object):
@@ -79,7 +77,7 @@ class CityTime(object):
 
     def __str__(self) -> str:
         """
-        Returns the local time in string format.
+        Returns the UTC time in string format.
 
         """
         if self._datetime != datetime.datetime.min:
@@ -129,8 +127,7 @@ class CityTime(object):
         other_utc = getattr(other, 'utc', None)
         if other_utc and self._datetime == other_utc():
             return True
-        else:
-            return self._datetime == other
+        return False
 
     def __ne__(self, other: Any) -> bool:
         """
@@ -146,8 +143,7 @@ class CityTime(object):
         other_utc = getattr(other, 'utc', None)
         if other_utc and self.utc() != other_utc():
             return True
-        else:
-            return self.utc() != other
+        return False
 
     def __lt__(self, other: Any) -> bool:
         """
@@ -166,8 +162,7 @@ class CityTime(object):
         other_utc = getattr(other, 'utc', None)
         if other_utc and self.utc() < other_utc():
             return True
-        else:
-            return self.utc() < other
+        return False
 
     def __le__(self, other: Any) -> bool:
         """
@@ -187,10 +182,9 @@ class CityTime(object):
         if self._is_set is False:
             raise ValueError('Date/Time zone has not been set.')
         other_utc = getattr(other, 'utc', None)
-        if other_utc and self._datetime <= other_utc():
+        if other_utc and self.utc() <= other_utc():
             return True
-        else:
-            return self._datetime <= other
+        return False
 
     def __gt__(self, other: Any) -> bool:
         """
@@ -207,8 +201,7 @@ class CityTime(object):
         other_utc = getattr(other, 'utc', None)
         if other_utc and self.utc() > other_utc():
             return True
-        else:
-            return self.utc() > other
+        return False
 
     def __ge__(self, other: Any) -> bool:
         """
@@ -228,8 +221,7 @@ class CityTime(object):
         other_utc = getattr(other, 'utc', None)
         if other_utc and self.utc() >= other_utc():
             return True
-        else:
-            return self.utc() >= other
+        return False
 
     def __add__(self, other: Any) -> 'CityTime':
         """
@@ -806,9 +798,9 @@ class Range(object):
 
         """
         def check_set(obj: Any) -> None:
-            if not self._is_set:
+            if self._is_set is False:
                 raise ValueError("Range is not set.")
-            if not getattr(obj, 'check_set', False):
+            if getattr(obj, '_is_set', False) is False:
                 raise ValueError("Object to be compared is not set.")
 
         if isinstance(citytime_or_range_object, Range):
@@ -884,6 +876,8 @@ class Range(object):
         if not isinstance(other, Range):
             return NotImplemented
         if not self._is_set:
+            if other.check_set() is False:
+                return True
             raise ValueError("Range is not set.")
         if not other.check_set():
             raise ValueError("Range object to be compared is not set.")
@@ -899,7 +893,7 @@ class Range(object):
         Range objects are not equal if either the start_times or the end_times don't match.
         """
         if not isinstance(other, Range):
-            raise NotImplemented
+            return NotImplemented
         if not self._is_set:
             raise ValueError("Range is not set.")
         if not other.check_set():
@@ -1010,12 +1004,16 @@ class Range(object):
         return False
 
     def __str__(self) -> str:
+        if self._is_set is False:
+            return "Range object is not set."
         return "Range: start: {} - end: {}".format(
             self.start_time().__str__(),
             self.end_time().__str__()
         )
 
     def __repr__(self) -> str:
+        if self._is_set is False:
+            return "Range object is not set."
         return "Range: start: {} - end: {}".format(
             self.start_time().__str__(),
             self.end_time().__str__()
