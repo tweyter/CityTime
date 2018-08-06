@@ -62,6 +62,10 @@ with open(os.path.join(HERE, 'README.rst'), encoding='utf-8') as f:
 VERSION = find_meta("version")
 LONG = (
     read("README.rst")
+    + "\n\n"
+    + '=============='
+    + '\n\n'
+    + read('CHANGELOG.rst')
 )
 
 if __name__ == '__main__':

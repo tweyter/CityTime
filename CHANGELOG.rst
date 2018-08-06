@@ -1,1 +1,6 @@
-Version 1.1.3
+Changelog
+#########
+
+**Version 1.0.0**
+
+Initial PyPI release.

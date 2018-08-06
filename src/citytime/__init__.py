@@ -1,7 +1,8 @@
+
 from .citytime import CityTime, Range
 
 
-__version__ = "1.1.3"
+__version__ = "1.0.0"
 
 __title__ = "CityTime"
 __description__ = "A tool for comparing time between different locations/timezones"
